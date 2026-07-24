@@ -1,0 +1,31 @@
+:root {
+  color-scheme: dark;
+  --bg: #05070a;
+  --bg-2: #0a0f14;
+  --accent: #19f9d8; /* neon teal */
+  --accent-2: #ff2e97; /* neon magenta */
+  --text: #d6f7ef;
+  --muted: #4a6b66;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, 'SFMono-Regular',
+    Menlo, Consolas, monospace;
+  background:
+    radial-gradient(900px 500px at 78% -12%, rgba(25, 249, 216, 0.08) 0%, transparent 60%),
+    radial-gradient(700px 500px at 12% 110%, rgba(255, 46, 151, 0.07) 0%, transparent 55%),
+    var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
