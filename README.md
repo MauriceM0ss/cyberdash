@@ -1,5 +1,10 @@
 # CyberDash
 
+> ⚠️ **Disclaimer:** This is a Claude Code "vibe coding" project. It was built
+> iteratively with the [Claude Code](https://claude.com/claude-code) AI agent
+> and is intended for personal/experimental use. Review the code before relying
+> on it.
+
 A minimal dashboard with a floating, macOS-style dock. Each dock icon launches
 one of your self-hosted apps (MyHours, RCDB, …) — by default embedded inside the
 dashboard via an iframe, with a one-click fallback to open in a new tab for apps
