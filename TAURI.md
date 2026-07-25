@@ -52,22 +52,52 @@ npm install && npm run dev   # host Node
 cargo tauri dev              # or: npm run tauri dev
 ```
 
-## Build a native package
+## Package & install on Ubuntu
 
 ```bash
-npm run build                       # produces dist/ (host Node, or in Docker)
-cargo tauri build                   # → src-tauri/target/release/bundle/{deb,appimage}/
+npm run build                 # 1. build the frontend → dist/
+npm run tauri build           # 2. compile release + bundle
 ```
+
+The `.deb` lands at:
+
+```
+src-tauri/target/release/bundle/deb/CyberDash_0.1.0_amd64.deb
+```
+
+Install it (either command; `apt` pulls the two runtime deps automatically):
+
+```bash
+sudo apt install ./src-tauri/target/release/bundle/deb/CyberDash_0.1.0_amd64.deb
+# or: sudo dpkg -i <deb> && sudo apt -f install
+```
+
+This installs `/usr/bin/cyberdash`, the launcher entry
+`/usr/share/applications/CyberDash.desktop`, and the green-alien icon into the
+hicolor theme — so **CyberDash appears in the GNOME app grid** with its icon and
+launches like any native app. Uninstall with `sudo apt remove cyber-dash`.
+
+Runtime dependencies (declared in the package): `libwebkit2gtk-4.1-0`,
+`libgtk-3-0`. The apps themselves still come from your Docker containers on
+`localhost` — start them as usual before opening CyberDash.
+
+> **AppImage:** `bundle.targets` is set to `deb` only. Tauri can also build an
+> AppImage, but it shells out to `linuxdeploy` (extra downloads + FUSE) which is
+> flaky; the `.deb` is the right native package for Ubuntu. Re-add `"appimage"`
+> to `targets` in `tauri.conf.json` if you want to try it.
 
 ## App icons
 
-`src-tauri/icons/icon.png` is a placeholder copy of `public/icons/cyberdash.png`
-so the project builds out of the box. To generate the full multi-size icon set
-from any square source PNG:
+The launcher/app icon is generated from `public/favicon.svg` (the green alien).
+Regenerate the full multi-size set any time with:
 
 ```bash
-cargo tauri icon public/icons/cyberdash.png
+npm run tauri icon public/favicon.svg
 ```
+
+The Linux-relevant outputs (`32x32.png`, `128x128.png`, `128x128@2x.png`,
+`icon.icns`, `icon.ico`) are committed and referenced by `bundle.icon`; the
+Android/iOS/Windows-Store variants it also emits are git-ignored.
 
 ## Embedding mode (iframe vs. native webview)
 
