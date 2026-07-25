@@ -4,6 +4,10 @@
   width: 100vw;
   overflow: hidden;
   --bar-h: 38px;
+  /* Bottom band left clear for the dock. A native webview (Tauri) can't be
+     overlapped by HTML, so the app view stops above this strip and the dock
+     floats within it. */
+  --dock-clear: 104px;
 }
 
 /* ── Top bar: CyberDash's own chrome, always above every app frame ──────── */
@@ -75,6 +79,17 @@
   height: 100%;
   border: 0;
   background: var(--bg);
+}
+
+/* Native (Tauri) stage slot: the region a child webview is positioned over.
+   It sits below the top bar and stops above the dock band, matching the rect
+   we hand to the webview. Pure backdrop — the OS webview renders on top. */
+.native-stage {
+  position: absolute;
+  inset: 0 0 var(--dock-clear) 0;
+  width: auto;
+  height: auto;
+  z-index: 0;
 }
 
 /* ── About / help overlay ──────────────────────────────────────────────── */

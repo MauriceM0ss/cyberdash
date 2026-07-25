@@ -69,15 +69,42 @@ from any square source PNG:
 cargo tauri icon public/icons/cyberdash.png
 ```
 
+## Native webview embedding (iframe → child webview)
+
+In the Tauri shell, apps are no longer embedded as `<iframe>`s. Each app is a
+**native child webview** (Tauri v2 multi-webview, the `unstable` Cargo feature)
+layered over the shell window and positioned to overlay the stage. The same
+React app still uses iframes in a plain browser — `src/App.jsx` branches on
+`NATIVE = isTauri()`.
+
+- `src/nativeStage.js` — imperative manager: create-on-first-launch, keep-alive,
+  show/hide on switch, reposition on resize, reload = close + recreate.
+- `src/useNativeStage.js` — drives that manager from React state.
+- Config: `tauri = { features = ["unstable"] }` and the `core:webview:*`
+  permissions in `capabilities/default.json`.
+
+**The payoff:** a native webview is top-level web content, not a frame, so
+`X-Frame-Options` / CSP `frame-ancestors` don't apply. Apps the browser refuses
+to iframe now embed fine — you can flip their `embed: false` to `true`.
+
+**The tradeoffs this prototype makes you feel (by design):**
+
+- **Native webviews float above all HTML** in the shell window; HTML can't be
+  drawn on top of them. So the shell reserves a bottom band (`--dock-clear`) for
+  the dock, and hides the active webview whenever an HTML layer must show
+  through (About panel, offline/blocked notices). The old look — a translucent
+  dock floating *over* a full-height app — isn't possible with a native view;
+  the dock now sits in a reserved strip.
+- **Keep-alive** works (switching hides/shows, preserving each app's state), but
+  the views are OS-level, not DOM nodes — no `display:none` tricks, positioning
+  is manual in logical pixels.
+- **Fractional scaling** (e.g. Wayland 125%) can cause 1px positioning gaps at
+  the webview edges; fine for a prototype, worth revisiting.
+
 ## Notes / known caveats
 
-- **Iframes vs. native webviews.** This prototype keeps the current `<iframe>`
-  embedding, so `X-Frame-Options` / CSP still apply exactly as in the browser
-  (the `embed: false` fallbacks still matter). The bigger win — replacing
-  iframes with Tauri child webviews to bypass frame-blocking entirely — is the
-  natural next step, not done here.
 - **Light palette is a first pass.** The dark theme is the original neon look,
   untouched. The light theme is an Adwaita-flavoured starting point in
   `src/index.css` (`:root[data-theme='light']`) — tune to taste.
-- WebKitGTK is the component to watch for cross-origin embedding quirks; test
-  your actual apps early.
+- WebKitGTK is the component to watch — both for cross-origin webview quirks and
+  because multi-webview is an `unstable` API. Test your actual apps early.

@@ -1,11 +1,21 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Core capability for the CyberDash shell window: read the current theme and subscribe to system theme changes.",
+  "description": "Core capability for the CyberDash shell: read/subscribe to the system theme, and create/position/show/hide the native child webviews that embed each app.",
   "windows": ["main"],
+  "webviews": ["main", "app__*"],
   "permissions": [
     "core:default",
     "core:window:allow-theme",
-    "core:window:allow-set-theme"
+    "core:window:allow-set-theme",
+    "core:webview:allow-create-webview",
+    "core:webview:allow-webview-position",
+    "core:webview:allow-webview-size",
+    "core:webview:allow-set-webview-position",
+    "core:webview:allow-set-webview-size",
+    "core:webview:allow-set-webview-focus",
+    "core:webview:allow-webview-show",
+    "core:webview:allow-webview-hide",
+    "core:webview:allow-webview-close"
   ]
 }
