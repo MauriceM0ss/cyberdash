@@ -8,10 +8,18 @@ import * as nativeStage from './nativeStage.js'
 import Dock from './components/Dock.jsx'
 import './App.css'
 
-// In the Tauri shell we embed apps as native child webviews (no X-Frame-Options
-// limits); in a plain browser we fall back to <iframe>. This flips the whole
-// stage between the two strategies.
 const NATIVE = isTauri()
+
+// How apps are embedded inside the Tauri shell:
+//   'iframe'  — reliable default; identical to the browser (subject to
+//               X-Frame-Options / CSP, so some apps need embed:false).
+//   'webview' — experimental: one native child webview per app, which bypasses
+//               X-Frame-Options. Broken on WebKitGTK today — the unstable
+//               multi-webview API tiles the webviews 50/50 instead of honoring
+//               our positioning (see TAURI.md). Flip to try it on another OS.
+// A plain browser always uses iframes regardless.
+const EMBED_MODE = 'iframe' // 'iframe' | 'webview'
+const USE_WEBVIEW = NATIVE && EMBED_MODE === 'webview'
 
 const ORDER_KEY = 'cyberdash.dockOrder'
 const ACTIVE_KEY = 'cyberdash.activeId'
@@ -79,7 +87,7 @@ export default function App() {
   useEffect(() => {
     for (const a of apps) {
       if (prevHealth.current[a.id] === 'down' && health[a.id] === 'up') {
-        if (NATIVE) {
+        if (USE_WEBVIEW) {
           if (a.embed) {
             nativeStage.reloadApp(a, readRect(stageSlotRef.current))
           }
@@ -122,7 +130,7 @@ export default function App() {
   // Force a fresh load of a single embedded app: recreate its native webview
   // (Tauri) or bump its reload nonce to remount the iframe (browser).
   function reloadApp(id) {
-    if (NATIVE) {
+    if (USE_WEBVIEW) {
       const app = apps.find((a) => a.id === id)
       if (app?.embed) nativeStage.reloadApp(app, readRect(stageSlotRef.current))
       return
@@ -168,8 +176,8 @@ export default function App() {
     helpOpen ||
     (!!active && (blocked[active.id] || health[active.id] === 'down'))
   useNativeStage({
-    enabled: NATIVE,
-    activeApp: NATIVE && active && active.embed ? active : null,
+    enabled: USE_WEBVIEW,
+    activeApp: USE_WEBVIEW && active && active.embed ? active : null,
     coverHtml: htmlCoversStage,
     slotRef: stageSlotRef,
   })
@@ -205,7 +213,7 @@ export default function App() {
             target + backdrop; the real app content is the OS webview on top.
             X-Frame-Options / CSP don't apply to a top-level webview, so apps
             that refuse to iframe embed fine here. */}
-        {NATIVE && active && active.embed && (
+        {USE_WEBVIEW && active && active.embed && (
           <div className="app-frame native-stage" ref={stageSlotRef} aria-hidden="true" />
         )}
 
@@ -215,7 +223,7 @@ export default function App() {
             its document intact — open dialogs, scroll position, form input, and
             any background polling/notifications all survive a switch — instead
             of destroying and cold-reloading it. */}
-        {!NATIVE &&
+        {!USE_WEBVIEW &&
           apps
             .filter((a) => a.embed)
             .map((a) => {

@@ -69,13 +69,22 @@ from any square source PNG:
 cargo tauri icon public/icons/cyberdash.png
 ```
 
-## Native webview embedding (iframe → child webview)
+## Embedding mode (iframe vs. native webview)
 
-In the Tauri shell, apps are no longer embedded as `<iframe>`s. Each app is a
-**native child webview** (Tauri v2 multi-webview, the `unstable` Cargo feature)
-layered over the shell window and positioned to overlay the stage. The same
-React app still uses iframes in a plain browser — `src/App.jsx` branches on
-`NATIVE = isTauri()`.
+How apps are embedded inside the Tauri shell is a toggle in `src/App.jsx`:
+
+```js
+const EMBED_MODE = 'iframe' // 'iframe' | 'webview'
+```
+
+**`'iframe'` (default, and what works today).** Apps embed via `<iframe>`,
+exactly as in the browser — subject to `X-Frame-Options` / CSP, so some apps
+still need `embed: false`. Reliable on WebKitGTK.
+
+**`'webview'` (experiment, currently broken on Linux).** One native child
+webview per app (Tauri v2 multi-webview, `unstable` Cargo feature), which would
+bypass `X-Frame-Options` entirely — a native webview is top-level content, not a
+frame. The code is here:
 
 - `src/nativeStage.js` — imperative manager: create-on-first-launch, keep-alive,
   show/hide on switch, reposition on resize, reload = close + recreate.
@@ -83,23 +92,26 @@ React app still uses iframes in a plain browser — `src/App.jsx` branches on
 - Config: `tauri = { features = ["unstable"] }` and the `core:webview:*`
   permissions in `capabilities/default.json`.
 
-**The payoff:** a native webview is top-level web content, not a frame, so
-`X-Frame-Options` / CSP `frame-ancestors` don't apply. Apps the browser refuses
-to iframe now embed fine — you can flip their `embed: false` to `true`.
+### Why `'webview'` is off by default — the WebKitGTK finding
 
-**The tradeoffs this prototype makes you feel (by design):**
+Tested on GNOME/Wayland at 100% scaling: adding a child webview to the
+config-created window makes WebKitGTK **tile the two webviews 50/50** (shell in
+the top half, app in the bottom) instead of honoring our `setPosition`/`setSize`
+— the placement diagnostic showed `requested h=631` but `applied h=386`, with
+the shell webview's own viewport shrunk to half height. This is a known rough
+edge of the `unstable` multi-webview API on Linux: a webview added to a
+`WebviewWindow` (which already owns a main webview) gets packed in a box, not a
+free-positioning container.
 
-- **Native webviews float above all HTML** in the shell window; HTML can't be
-  drawn on top of them. So the shell reserves a bottom band (`--dock-clear`) for
-  the dock, and hides the active webview whenever an HTML layer must show
-  through (About panel, offline/blocked notices). The old look — a translucent
-  dock floating *over* a full-height app — isn't possible with a native view;
-  the dock now sits in a reserved strip.
-- **Keep-alive** works (switching hides/shows, preserving each app's state), but
-  the views are OS-level, not DOM nodes — no `display:none` tricks, positioning
-  is manual in logical pixels.
-- **Fractional scaling** (e.g. Wayland 125%) can cause 1px positioning gaps at
-  the webview edges; fine for a prototype, worth revisiting.
+The likely real fix is architectural — build a plain `Window` (not a config
+`WebviewWindow`) and add the shell + app webviews as positioned children of a
+`GtkFixed`, the way Tauri's own `multiwebview` example does. Not done here.
+
+Even once positioned correctly, native webviews carry inherent tradeoffs worth
+knowing: they **float above all HTML** (hence the reserved dock band
+`--dock-clear`, and hiding the webview when the About panel / offline notice
+must show through), positioning is **manual in logical pixels**, and fractional
+scaling can leave 1px edge gaps.
 
 ## Notes / known caveats
 

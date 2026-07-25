@@ -76,8 +76,31 @@ export async function showApp(app, rect) {
     await entry.webview.setSize(new LogicalSize(rect.width, rect.height))
     await entry.webview.show()
     await entry.webview.setFocus()
+    if (import.meta.env.DEV) await logPlacement(app, rect, entry.webview)
   } catch (e) {
     console.error('[nativeStage] failed to show webview for', app.id, e)
+  }
+}
+
+// Temporary diagnostic: compare what we asked for (logical px) against what the
+// webview actually reports (physical px), plus the scale factor. Read this in
+// the WebKitGTK inspector console (right-click the top bar → Inspect Element).
+async function logPlacement(app, rect, webview) {
+  try {
+    const [pos, size, scale] = await Promise.all([
+      webview.position(),
+      webview.size(),
+      getCurrentWindow().scaleFactor(),
+    ])
+    console.log(
+      `[nativeStage] placement for ${app.id}\n` +
+        `  requested (logical): x=${rect.x} y=${rect.y} w=${rect.width} h=${rect.height}\n` +
+        `  applied  (physical): x=${pos.x} y=${pos.y} w=${size.width} h=${size.height}\n` +
+        `  scaleFactor=${scale}  devicePixelRatio=${window.devicePixelRatio}\n` +
+        `  window inner (logical): ${window.innerWidth}x${window.innerHeight}`,
+    )
+  } catch (e) {
+    console.warn('[nativeStage] placement diagnostic failed', e)
   }
 }
 
