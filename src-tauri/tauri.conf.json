@@ -1,0 +1,36 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "CyberDash",
+  "version": "0.1.0",
+  "identifier": "dev.cyberdash.shell",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "CyberDash",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 860,
+        "minHeight": 600,
+        "resizable": true,
+        "decorations": true,
+        "theme": null
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["deb", "appimage"],
+    "icon": ["icons/icon.png"],
+    "category": "Utility",
+    "shortDescription": "A native shell for your self-hosted apps",
+    "longDescription": "CyberDash is a minimal launcher/dashboard that embeds your self-hosted Docker apps in a native GNOME window and follows your desktop's Light/Dark theme."
+  }
+}

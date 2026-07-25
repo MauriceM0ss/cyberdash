@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { apps } from './apps.config.js'
 import { useHealth } from './useHealth.js'
+import { useTheme } from './useTheme.js'
+import { isTauri } from './theme.js'
 import Dock from './components/Dock.jsx'
 import './App.css'
 
@@ -249,6 +251,8 @@ function TopBar({ canReload, onReload, onHelp }) {
 // About / help overlay. Closes on the ✕, on a backdrop click, or via Esc / ?
 // (both handled by the global key handler in App).
 function HelpOverlay({ appCount, onClose }) {
+  const theme = useTheme()
+  const source = isTauri() ? 'GNOME desktop' : 'browser (prefers-color-scheme)'
   return (
     <div className="help-overlay" onClick={onClose}>
       <div
@@ -297,6 +301,10 @@ function HelpOverlay({ appCount, onClose }) {
         <p className="help-note">
           Shortcuts fire only when the dashboard has focus — click the bar or
           dock first if you’ve been typing inside an app.
+        </p>
+        <p className="help-theme">
+          Theme: <strong>{theme}</strong> — following your {source}. Flip your
+          desktop’s Light/Dark style and CyberDash follows instantly.
         </p>
       </div>
     </div>
