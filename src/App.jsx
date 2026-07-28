@@ -358,6 +358,11 @@ function HelpOverlay({ appCount, onClose }) {
           Theme: <strong>{theme}</strong> — following your {source}. Flip your
           desktop’s Light/Dark style and CyberDash follows instantly.
         </p>
+        <p className="help-theme">
+          Shell origin: <strong>{window.location.origin}</strong> — this is the
+          origin apps see as the framer; add it to their CSP{' '}
+          <code>frame-ancestors</code> to allow embedding.
+        </p>
       </div>
     </div>
   )

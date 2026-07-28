@@ -42,7 +42,8 @@ export const apps = [
     name: 'PeopleManager',
     icon: '/icons/peoplemanager.png',
     url: 'http://localhost:8081',
-    embed: true, // now allows framing from localhost:5173 via CSP frame-ancestors
+    embed: true, // CSP frame-ancestors must allow both the browser shell
+    //              (http://localhost:5173) and the native .deb (tauri://localhost)
   },
   {
     id: 'subscriptions',
