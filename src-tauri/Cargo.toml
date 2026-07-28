@@ -1,0 +1,28 @@
+[package]
+name = "cyberdash"
+version = "0.1.0"
+description = "CyberDash — native GNOME shell (Tauri prototype)"
+authors = ["CyberDash"]
+edition = "2021"
+rust-version = "1.77.2"
+
+# The Tauri app is split into a lib (the real entry point, reusable on mobile)
+# and a thin main.rs binary, per the Tauri v2 project layout.
+[lib]
+name = "cyberdash_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# `unstable` enables the multi-webview API this prototype uses to embed each app
+# as a native child webview (src/nativeStage.js) instead of an <iframe>.
+tauri = { version = "2", features = ["unstable"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[features]
+# Tauri's custom-protocol is used in release builds to serve the bundled
+# frontend; `tauri dev` doesn't need it.
+custom-protocol = ["tauri/custom-protocol"]

@@ -1,0 +1,9 @@
+/target
+/gen/schemas
+
+# `tauri icon` also emits Android/iOS/Windows-Store icons we don't ship on
+# Linux. Regenerate any time with: npm run tauri icon public/favicon.svg
+/icons/android
+/icons/ios
+/icons/Square*Logo.png
+/icons/StoreLogo.png

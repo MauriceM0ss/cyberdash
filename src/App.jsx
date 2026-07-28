@@ -1,8 +1,25 @@
 import { useState, useEffect, useRef } from 'react'
 import { apps } from './apps.config.js'
 import { useHealth } from './useHealth.js'
+import { useTheme } from './useTheme.js'
+import { isTauri } from './theme.js'
+import { useNativeStage, readRect } from './useNativeStage.js'
+import * as nativeStage from './nativeStage.js'
 import Dock from './components/Dock.jsx'
 import './App.css'
+
+const NATIVE = isTauri()
+
+// How apps are embedded inside the Tauri shell:
+//   'iframe'  — reliable default; identical to the browser (subject to
+//               X-Frame-Options / CSP, so some apps need embed:false).
+//   'webview' — experimental: one native child webview per app, which bypasses
+//               X-Frame-Options. Broken on WebKitGTK today — the unstable
+//               multi-webview API tiles the webviews 50/50 instead of honoring
+//               our positioning (see TAURI.md). Flip to try it on another OS.
+// A plain browser always uses iframes regardless.
+const EMBED_MODE = 'iframe' // 'iframe' | 'webview'
+const USE_WEBVIEW = NATIVE && EMBED_MODE === 'webview'
 
 const ORDER_KEY = 'cyberdash.dockOrder'
 const ACTIVE_KEY = 'cyberdash.activeId'
@@ -47,6 +64,8 @@ export default function App() {
   const [helpOpen, setHelpOpen] = useState(false)
   // Live reachability of each app: { [id]: 'checking' | 'up' | 'down' }.
   const health = useHealth(apps)
+  // The DOM element the native stage webview is positioned to overlay (Tauri).
+  const stageSlotRef = useRef(null)
 
   useEffect(() => {
     localStorage.setItem(ORDER_KEY, JSON.stringify(order))
@@ -59,15 +78,22 @@ export default function App() {
     else localStorage.removeItem(ACTIVE_KEY)
   }, [activeId])
 
-  // Auto-recovery: an iframe that failed while its app was down won't retry on
-  // its own, so when a health check flips an app from 'down' back to 'up' we
-  // bump its reload nonce to remount (and freshly load) that one frame. The
-  // offline card is then replaced by the now-live app automatically.
+  // Auto-recovery: a frame/webview that failed while its app was down won't
+  // retry on its own, so when a health check flips an app from 'down' back to
+  // 'up' we freshly reload just that one — remounting the iframe (browser) or
+  // recreating the native webview (Tauri). The offline card is then replaced by
+  // the now-live app automatically.
   const prevHealth = useRef({})
   useEffect(() => {
     for (const a of apps) {
       if (prevHealth.current[a.id] === 'down' && health[a.id] === 'up') {
-        setReloadNonce((n) => ({ ...n, [a.id]: (n[a.id] || 0) + 1 }))
+        if (USE_WEBVIEW) {
+          if (a.embed) {
+            nativeStage.reloadApp(a, readRect(stageSlotRef.current))
+          }
+        } else {
+          setReloadNonce((n) => ({ ...n, [a.id]: (n[a.id] || 0) + 1 }))
+        }
       }
     }
     prevHealth.current = health
@@ -101,8 +127,14 @@ export default function App() {
     setActiveId(app.id)
   }
 
-  // Force a fresh load of a single embedded app by bumping its reload nonce.
+  // Force a fresh load of a single embedded app: recreate its native webview
+  // (Tauri) or bump its reload nonce to remount the iframe (browser).
   function reloadApp(id) {
+    if (USE_WEBVIEW) {
+      const app = apps.find((a) => a.id === id)
+      if (app?.embed) nativeStage.reloadApp(app, readRect(stageSlotRef.current))
+      return
+    }
     setReloadNonce((n) => ({ ...n, [id]: (n[id] || 0) + 1 }))
   }
 
@@ -137,6 +169,19 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [orderedApps, activeId, helpOpen])
 
+  // Drive the native child webviews from state (inert in a plain browser). We
+  // hide the active webview whenever an HTML layer must show through it, since
+  // native webviews float above all HTML in the shell window.
+  const htmlCoversStage =
+    helpOpen ||
+    (!!active && (blocked[active.id] || health[active.id] === 'down'))
+  useNativeStage({
+    enabled: USE_WEBVIEW,
+    activeApp: USE_WEBVIEW && active && active.embed ? active : null,
+    coverHtml: htmlCoversStage,
+    slotRef: stageSlotRef,
+  })
+
   return (
     <div className="app">
       {/* Thin bar that always sits above every app frame; carries CyberDash's
@@ -163,40 +208,49 @@ export default function App() {
           <OfflineNotice app={active} />
         )}
 
-        {/* Every embeddable app is mounted once and kept alive for the life of
-            the CyberDash tab; switching apps only toggles which frame is
-            visible. Hiding an inactive frame with `display:none` keeps its
-            document intact — open dialogs, scroll position, form input, and
+        {/* NATIVE (Tauri): a native child webview per app floats over this
+            reserved slot — see useNativeStage. The slot is just a measurement
+            target + backdrop; the real app content is the OS webview on top.
+            X-Frame-Options / CSP don't apply to a top-level webview, so apps
+            that refuse to iframe embed fine here. */}
+        {USE_WEBVIEW && active && active.embed && (
+          <div className="app-frame native-stage" ref={stageSlotRef} aria-hidden="true" />
+        )}
+
+        {/* BROWSER: every embeddable app is mounted once as an iframe and kept
+            alive for the life of the tab; switching apps only toggles which
+            frame is visible. Hiding an inactive frame with `display:none` keeps
+            its document intact — open dialogs, scroll position, form input, and
             any background polling/notifications all survive a switch — instead
-            of destroying and cold-reloading it the way a conditional mount
-            (keyed on the active id) did. */}
-        {apps
-          .filter((a) => a.embed)
-          .map((a) => {
-            const isActive = a.id === activeId
-            return (
-              <iframe
-                key={`${a.id}:${reloadNonce[a.id] || 0}`}
-                className="app-frame"
-                src={a.url}
-                title={a.name}
-                // The frame stays mounted but hidden unless it's the active,
-                // non-blocked, reachable app — a BlockedNotice or OfflineNotice
-                // above takes its place otherwise. ('checking' still shows the
-                // frame; we only hide on a confirmed 'down'.)
-                style={{
-                  display:
-                    isActive && !blocked[a.id] && health[a.id] !== 'down'
-                      ? 'block'
-                      : 'none',
-                }}
-                // If the frame is refused we can't always detect it, but many
-                // browsers fire onError; the manual "open in tab" escape hatch
-                // in BlockedNotice covers the silent cases.
-                onError={() => setBlocked((b) => ({ ...b, [a.id]: true }))}
-              />
-            )
-          })}
+            of destroying and cold-reloading it. */}
+        {!USE_WEBVIEW &&
+          apps
+            .filter((a) => a.embed)
+            .map((a) => {
+              const isActive = a.id === activeId
+              return (
+                <iframe
+                  key={`${a.id}:${reloadNonce[a.id] || 0}`}
+                  className="app-frame"
+                  src={a.url}
+                  title={a.name}
+                  // The frame stays mounted but hidden unless it's the active,
+                  // non-blocked, reachable app — a BlockedNotice or
+                  // OfflineNotice above takes its place otherwise. ('checking'
+                  // still shows the frame; we only hide on a confirmed 'down'.)
+                  style={{
+                    display:
+                      isActive && !blocked[a.id] && health[a.id] !== 'down'
+                        ? 'block'
+                        : 'none',
+                  }}
+                  // If the frame is refused we can't always detect it, but many
+                  // browsers fire onError; the manual "open in tab" escape hatch
+                  // in BlockedNotice covers the silent cases.
+                  onError={() => setBlocked((b) => ({ ...b, [a.id]: true }))}
+                />
+              )
+            })}
       </main>
 
       <Dock
@@ -249,6 +303,8 @@ function TopBar({ canReload, onReload, onHelp }) {
 // About / help overlay. Closes on the ✕, on a backdrop click, or via Esc / ?
 // (both handled by the global key handler in App).
 function HelpOverlay({ appCount, onClose }) {
+  const theme = useTheme()
+  const source = isTauri() ? 'GNOME desktop' : 'browser (prefers-color-scheme)'
   return (
     <div className="help-overlay" onClick={onClose}>
       <div
@@ -297,6 +353,10 @@ function HelpOverlay({ appCount, onClose }) {
         <p className="help-note">
           Shortcuts fire only when the dashboard has focus — click the bar or
           dock first if you’ve been typing inside an app.
+        </p>
+        <p className="help-theme">
+          Theme: <strong>{theme}</strong> — following your {source}. Flip your
+          desktop’s Light/Dark style and CyberDash follows instantly.
         </p>
       </div>
     </div>

@@ -1,11 +1,93 @@
-:root {
+/* ── Theme tokens ───────────────────────────────────────────────────────────
+   CyberDash adapts to your desktop's Light/Dark preference. The Tauri (GNOME)
+   shell — or the browser — stamps `data-theme="light"|"dark"` on <html> (see
+   src/theme.js), and every colour below is derived from that. The
+   `prefers-color-scheme` block is only a pre-JS / no-JS fallback; an explicit
+   `[data-theme]` attribute always wins because it's more specific.
+
+   Dark is the original CyberDash "neon terminal" look, preserved as-is. Light
+   is an Adwaita-flavoured prototype palette — legible on GNOME's light style,
+   with the neon glow dialled right down.
+   ───────────────────────────────────────────────────────────────────────── */
+
+:root,
+:root[data-theme='dark'] {
   color-scheme: dark;
   --bg: #05070a;
   --bg-2: #0a0f14;
+  --surface: #0a0a0a; /* top bar */
+  --surface-2: #0c0c0c; /* cards / overlays */
+  --surface-3: #111111; /* kbd chips */
+  --border: #4a6b66;
+  --text: #d6f7ef;
+  --text-strong: #eaeaea;
+  --muted: #4a6b66;
+  --brand: #39ff14; /* neon green */
+  --brand-glow: rgba(57, 255, 20, 0.6);
+  --brand-soft: rgba(57, 255, 20, 0.12);
   --accent: #19f9d8; /* neon teal */
   --accent-2: #ff2e97; /* neon magenta */
-  --text: #d6f7ef;
-  --muted: #4a6b66;
+  --accent-soft: rgba(25, 249, 216, 0.12);
+  --overlay: rgba(0, 0, 0, 0.65);
+  --tile-bg: rgba(255, 255, 255, 0.02);
+  --dock-bg: rgba(6, 10, 13, 0.72);
+  --dock-border: rgba(25, 249, 216, 0.22);
+  --body-glow-1: rgba(25, 249, 216, 0.08);
+  --body-glow-2: rgba(255, 46, 151, 0.07);
+}
+
+/* Light palette — used by the explicit attribute set by src/theme.js. */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #fafafb;
+  --bg-2: #eef0f3;
+  --surface: #ffffff;
+  --surface-2: #ffffff;
+  --surface-3: #eef0f2;
+  --border: #ccd0d6;
+  --text: #2b2f36;
+  --text-strong: #14171c;
+  --muted: #6b7280;
+  --brand: #0f8a37;
+  --brand-glow: rgba(15, 138, 55, 0.22);
+  --brand-soft: rgba(15, 138, 55, 0.1);
+  --accent: #0b7f76;
+  --accent-2: #c31d6e;
+  --accent-soft: rgba(11, 127, 118, 0.12);
+  --overlay: rgba(20, 22, 26, 0.32);
+  --tile-bg: rgba(0, 0, 0, 0.03);
+  --dock-bg: rgba(255, 255, 255, 0.72);
+  --dock-border: rgba(11, 127, 118, 0.28);
+  --body-glow-1: rgba(11, 127, 118, 0.06);
+  --body-glow-2: rgba(195, 29, 110, 0.05);
+}
+
+/* Fallback for the brief moment before src/theme.js runs, or if JS is off. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    color-scheme: light;
+    --bg: #fafafb;
+    --bg-2: #eef0f3;
+    --surface: #ffffff;
+    --surface-2: #ffffff;
+    --surface-3: #eef0f2;
+    --border: #ccd0d6;
+    --text: #2b2f36;
+    --text-strong: #14171c;
+    --muted: #6b7280;
+    --brand: #0f8a37;
+    --brand-glow: rgba(15, 138, 55, 0.22);
+    --brand-soft: rgba(15, 138, 55, 0.1);
+    --accent: #0b7f76;
+    --accent-2: #c31d6e;
+    --accent-soft: rgba(11, 127, 118, 0.12);
+    --overlay: rgba(20, 22, 26, 0.32);
+    --tile-bg: rgba(0, 0, 0, 0.03);
+    --dock-bg: rgba(255, 255, 255, 0.72);
+    --dock-border: rgba(11, 127, 118, 0.28);
+    --body-glow-1: rgba(11, 127, 118, 0.06);
+    --body-glow-2: rgba(195, 29, 110, 0.05);
+  }
 }
 
 * {
@@ -23,9 +105,11 @@ body {
   font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, 'SFMono-Regular',
     Menlo, Consolas, monospace;
   background:
-    radial-gradient(900px 500px at 78% -12%, rgba(25, 249, 216, 0.08) 0%, transparent 60%),
-    radial-gradient(700px 500px at 12% 110%, rgba(255, 46, 151, 0.07) 0%, transparent 55%),
+    radial-gradient(900px 500px at 78% -12%, var(--body-glow-1) 0%, transparent 60%),
+    radial-gradient(700px 500px at 12% 110%, var(--body-glow-2) 0%, transparent 55%),
     var(--bg);
   color: var(--text);
   overflow: hidden;
+  /* Smooth the moment the desktop theme flips. */
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
