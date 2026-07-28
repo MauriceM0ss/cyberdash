@@ -18,7 +18,10 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 # `unstable` enables the multi-webview API this prototype uses to embed each app
 # as a native child webview (src/nativeStage.js) instead of an <iframe>.
-tauri = { version = "2", features = ["unstable"] }
+# `devtools` keeps the WebKitGTK inspector (right-click → Inspect Element)
+# available in RELEASE builds too — off by default in release. Handy for a
+# personal tool; drop it if you ever ship a locked-down build.
+tauri = { version = "2", features = ["unstable", "devtools"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
