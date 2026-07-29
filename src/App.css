@@ -4,13 +4,58 @@
   width: 100vw;
   overflow: hidden;
   --bar-h: 38px;
-  /* Bottom band left clear for the dock. A native webview (Tauri) can't be
-     overlapped by HTML, so the app view stops above this strip and the dock
-     floats within it. */
-  --dock-clear: 104px;
+
+  /* Dock metrics. These are the `normal` values; the .app--dock-{medium,small}
+     blocks below override them, and everything from the icon box to the band
+     kept clear for the dock is derived from them. */
+  --dock-icon: 52px;
+  --dock-img: 34px;
+  --dock-emoji: 28px;
+  --dock-gap: 10px;
+  --dock-pad-y: 10px;
+  --dock-pad-x: 14px;
+  /* Band left clear for the dock, on whichever edge it's docked to. A native
+     webview (Tauri) can't be overlapped by HTML, so the app view stops short
+     of this strip and the dock floats within it. */
+  --dock-clear-y: 104px;
+  --dock-clear-x: 100px;
+
+  /* Which edge the stage actually gives up, per dock position. */
+  --stage-clear-bottom: var(--dock-clear-y);
+  --stage-clear-right: 0px;
 }
 
-/* ── Top bar: CyberDash's own chrome, always above every app frame ──────── */
+.app--dock-right {
+  --stage-clear-bottom: 0px;
+  --stage-clear-right: var(--dock-clear-x);
+}
+
+.app--dock-medium {
+  --dock-icon: 44px;
+  --dock-img: 28px;
+  --dock-emoji: 24px;
+  --dock-gap: 8px;
+  --dock-pad-y: 8px;
+  --dock-pad-x: 11px;
+  --dock-clear-y: 90px;
+  --dock-clear-x: 86px;
+}
+
+.app--dock-small {
+  --dock-icon: 36px;
+  --dock-img: 23px;
+  --dock-emoji: 20px;
+  --dock-gap: 6px;
+  --dock-pad-y: 6px;
+  --dock-pad-x: 9px;
+  --dock-clear-y: 76px;
+  --dock-clear-x: 72px;
+}
+
+/* ── Top bar: CyberDash's own chrome, always above every app frame ────────
+   Near-black in every theme (--header-*), matching SecAnalysis and
+   CyberNewsHub — which is why it can't use --text/--brand: in the Light theme
+   those are near-black and would vanish against it. */
 .app-bar {
   position: absolute;
   top: 0;
@@ -21,17 +66,16 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 12px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  padding: 0 8px 0 12px;
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--header-border);
 }
 
 .app-bar-title {
   font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
   font-size: 13px;
   letter-spacing: 1px;
-  color: var(--brand);
-  opacity: 0.85;
+  color: var(--header-logo);
 }
 
 /* Terminal prompt prefix, echoing the home-screen wordmark. */
@@ -40,36 +84,62 @@
   opacity: 0.7;
 }
 
-.app-bar-actions {
+/* ── Icon buttons ────────────────────────────────────────────────────────
+   Ported from SecAnalysis's .icon-btn so the two apps' chrome matches: 34px
+   monochrome squares holding a stroke SVG that inherits `currentColor`. */
+.header-actions {
   display: flex;
+  align-items: center;
   gap: 6px;
 }
 
-.bar-btn {
-  width: 26px;
-  height: 26px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--brand);
-  font-size: 15px;
-  line-height: 1;
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--muted);
   cursor: pointer;
-  opacity: 0.6;
-  transition: opacity 0.15s ease, background 0.15s ease;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
 }
 
-.bar-btn:hover {
-  opacity: 1;
-  background: var(--brand-soft);
+.icon-btn:hover {
+  color: var(--text);
+  background: var(--surface-3);
 }
 
-/* ── Stage: where the active app (or home screen) shows, below the bar ──── */
+.icon-btn:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* The bar's icons sit on near-black whatever the theme, so they can't use the
+   shared hover — a light theme would put near-black on a near-white chip. */
+.app-bar .icon-btn {
+  color: var(--header-fg);
+}
+
+.app-bar .icon-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ── Stage: where the active app (or home screen) shows, below the bar ────
+   With the dock on the right the stage itself gives up that band, so frames
+   and the home grid stop short of it rather than sliding underneath — a
+   translucent dock over live app content is unreadable. A bottom dock keeps
+   the original behaviour of floating over a full-height stage. */
 .stage {
   position: absolute;
   top: var(--bar-h);
   left: 0;
-  right: 0;
+  right: var(--stage-clear-right);
   bottom: 0;
   background: var(--bg);
 }
@@ -82,11 +152,13 @@
 }
 
 /* Native (Tauri) stage slot: the region a child webview is positioned over.
-   It sits below the top bar and stops above the dock band, matching the rect
-   we hand to the webview. Pure backdrop — the OS webview renders on top. */
+   It sits below the top bar and stops short of the dock band on whichever edge
+   the dock is on. (The right-hand band is already excluded by .stage above, so
+   only the bottom one is subtracted here.) Pure backdrop — the OS webview
+   renders on top. */
 .native-stage {
   position: absolute;
-  inset: 0 0 var(--dock-clear) 0;
+  inset: 0 0 var(--stage-clear-bottom) 0;
   width: auto;
   height: auto;
   z-index: 0;
@@ -113,20 +185,11 @@
   box-shadow: 0 0 40px var(--brand-soft);
 }
 
+/* Positioning only — the look comes from .icon-btn. */
 .help-close {
   position: absolute;
   top: 10px;
   right: 12px;
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  font-size: 22px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.help-close:hover {
-  color: var(--brand);
 }
 
 .help-title {
@@ -405,7 +468,11 @@
   box-shadow: 0 0 22px var(--accent-soft);
 }
 
-/* ── Dock ───────────────────────────────────────────────────────────────── */
+/* ── Dock ─────────────────────────────────────────────────────────────────
+   Position (bottom / right) and size (normal / medium / small) come from
+   Settings ▸ Preferences as modifier classes. The size is entirely the
+   --dock-* custom properties set on .app, so the rules below are written once
+   and every size follows. */
 .dock {
   position: absolute;
   left: 50%;
@@ -414,25 +481,52 @@
   z-index: 10;
 }
 
+/* Right-hand dock: a vertical strip filling the stage's height, with the
+   pill centred in it. Laid out as a flex container rather than a
+   translateY(-50%) trick so a tall dock can scroll instead of overflowing off
+   the top of the window. */
+.dock--right {
+  left: auto;
+  right: 18px;
+  top: var(--bar-h);
+  bottom: 0;
+  transform: none;
+  display: flex;
+  align-items: center;
+}
+
 .dock-inner {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
+  gap: var(--dock-gap);
+  padding: var(--dock-pad-y) var(--dock-pad-x);
   border-radius: 16px;
   background: var(--dock-bg);
   border: 1px solid var(--dock-border);
   backdrop-filter: blur(18px) saturate(140%);
   box-shadow:
-    0 12px 40px rgba(0, 0, 0, 0.7),
+    0 12px 40px var(--dock-shadow),
     0 0 24px var(--accent-soft),
     inset 0 1px 0 var(--accent-soft);
 }
 
+.dock--right .dock-inner {
+  flex-direction: column;
+  /* More apps than fit the window height: scroll the dock rather than let it
+     run off the top and bottom. */
+  max-height: calc(100vh - var(--bar-h) - 36px);
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.dock--right .dock-inner::-webkit-scrollbar {
+  display: none;
+}
+
 .dock-item {
   position: relative;
-  width: 52px;
-  height: 52px;
+  width: var(--dock-icon);
+  height: var(--dock-icon);
   display: grid;
   place-items: center;
   border: 1px solid transparent;
@@ -469,6 +563,8 @@
     0 0 16px var(--accent-soft);
 }
 
+/* Running-app pip: under the icon on a bottom dock, beside it on a right one
+   (where "under" would collide with the next icon). */
 .dock-item.is-active::after {
   content: '';
   position: absolute;
@@ -480,15 +576,22 @@
   box-shadow: 0 0 8px var(--accent);
 }
 
+.dock--right .dock-item.is-active::after {
+  bottom: auto;
+  top: 50%;
+  left: -7px;
+  transform: translateY(-50%);
+}
+
 .dock-emoji {
-  font-size: 28px;
+  font-size: var(--dock-emoji);
   line-height: 1;
   user-select: none;
 }
 
 .dock-img {
-  width: 34px;
-  height: 34px;
+  width: var(--dock-img);
+  height: var(--dock-img);
   object-fit: contain;
   border-radius: 8px;
 }
@@ -501,7 +604,9 @@
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  border: 1.5px solid rgba(12, 16, 26, 0.85);
+  /* Ring in the page background so the light reads as a separate pip against
+     the icon behind it — themed, since a fixed dark ring disappears on Light. */
+  border: 1.5px solid var(--bg);
   background: var(--muted);
 }
 
@@ -535,4 +640,150 @@
   align-self: stretch;
   margin: 6px 4px;
   background: var(--dock-border);
+  flex: none;
+}
+
+.dock--right .dock-divider {
+  width: auto;
+  height: 1px;
+  margin: 4px 6px;
+}
+
+/* ── Settings dialog ──────────────────────────────────────────────────────
+   Same shape as the CyberNewsHub settings dialog: a tab strip above one
+   scrolling panel, every choice applying live (hence no Save / Cancel). */
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: var(--overlay);
+}
+
+.modal {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(92vw, 520px);
+  padding: 20px 24px 24px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+  box-shadow: 0 18px 60px var(--dock-shadow);
+}
+
+.settings-modal {
+  max-height: min(680px, calc(100vh - 80px));
+  overflow: hidden;
+}
+
+.dlg-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modal-title {
+  margin: 0;
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  font-size: 18px;
+  letter-spacing: 1.5px;
+  color: var(--brand);
+}
+
+.settings-tabs {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-tab {
+  appearance: none;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  border-radius: 7px 7px 0 0;
+  padding: 8px 16px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.settings-tab:hover {
+  color: var(--text);
+  background: var(--surface-3);
+}
+
+.settings-tab.is-active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* Only the panel scrolls, so the tab strip stays put on a short window. */
+.settings-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding-top: 4px;
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settings-section-title {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--accent);
+}
+
+.settings-desc {
+  margin: 0 0 4px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.modal-input {
+  width: 100%;
+  padding: 9px 11px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text);
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.modal-input:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }

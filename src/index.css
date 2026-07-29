@@ -1,92 +1,220 @@
 /* ── Theme tokens ───────────────────────────────────────────────────────────
-   CyberDash adapts to your desktop's Light/Dark preference. The Tauri (GNOME)
-   shell — or the browser — stamps `data-theme="light"|"dark"` on <html> (see
-   src/theme.js), and every colour below is derived from that. The
-   `prefers-color-scheme` block is only a pre-JS / no-JS fallback; an explicit
-   `[data-theme]` attribute always wins because it's more specific.
+   The five palettes are ported from the CyberNewsHub app (its
+   `static/style.css`), so the two apps look like one family. A theme is chosen
+   by the `data-theme` attribute on <html>, stamped by src/theme.js from the
+   saved preference in Settings ▸ Appearance.
 
-   Dark is the original CyberDash "neon terminal" look, preserved as-is. Light
-   is an Adwaita-flavoured prototype palette — legible on GNOME's light style,
-   with the neon glow dialled right down.
+   The preference may also be `auto`, in which case theme.js resolves it to
+   `neon` or `light` from the desktop's Light/Dark style and keeps re-resolving
+   as that changes — `data-theme` on <html> is always one of the five concrete
+   themes, never the literal string "auto".
+
+   Token map (CyberDash name ← CyberNewsHub name):
+     --brand ← --accent       the primary/active colour: wordmark, clock, dock
+     --accent ← --accent2     the secondary accent: dock chrome, open buttons
+     --brand-soft / --accent-soft ← --accent-dim
+     --header-* are that theme's own top-bar palette, carried over verbatim —
+     the bar is near-black in every theme, so it can't reuse --text/--brand
+     (in Light those are near-black and would vanish against it).
+
+   Only `neon` keeps the neon glow; the calmer themes dial --brand-glow right
+   down, mirroring CyberNewsHub's `--glow-*: none`.
    ───────────────────────────────────────────────────────────────────────── */
 
+/* ── Dark Terminal (default) — CyberDash's original neon look. ── */
 :root,
-:root[data-theme='dark'] {
+:root[data-theme='neon'] {
   color-scheme: dark;
-  --bg: #05070a;
-  --bg-2: #0a0f14;
-  --surface: #0a0a0a; /* top bar */
-  --surface-2: #0c0c0c; /* cards / overlays */
-  --surface-3: #111111; /* kbd chips */
-  --border: #4a6b66;
+  --bg: #07090b;
+  --bg-2: #0e1114;
+  --surface: #0e1114;
+  --surface-2: #0e1114;
+  --surface-3: #161b20;
+  --border: rgba(120, 140, 150, 0.24);
   --text: #d6f7ef;
-  --text-strong: #eaeaea;
-  --muted: #4a6b66;
-  --brand: #39ff14; /* neon green */
+  --text-strong: #e6edf2;
+  --muted: #7d8a93;
+  --brand: #39ff14;
   --brand-glow: rgba(57, 255, 20, 0.6);
   --brand-soft: rgba(57, 255, 20, 0.12);
-  --accent: #19f9d8; /* neon teal */
-  --accent-2: #ff2e97; /* neon magenta */
-  --accent-soft: rgba(25, 249, 216, 0.12);
+  --accent: #19f0ff;
+  --accent-2: #ff2e97;
+  --accent-soft: rgba(25, 240, 255, 0.12);
   --overlay: rgba(0, 0, 0, 0.65);
   --tile-bg: rgba(255, 255, 255, 0.02);
   --dock-bg: rgba(6, 10, 13, 0.72);
-  --dock-border: rgba(25, 249, 216, 0.22);
-  --body-glow-1: rgba(25, 249, 216, 0.08);
+  --dock-border: rgba(25, 240, 255, 0.22);
+  --dock-shadow: rgba(0, 0, 0, 0.7);
+  --body-glow-1: rgba(25, 240, 255, 0.08);
   --body-glow-2: rgba(255, 46, 151, 0.07);
+  --header-bg: #000000;
+  --header-border: rgba(255, 255, 255, 0.14);
+  --header-text: #e6edf2;
+  --header-fg: #19f0ff;
+  --header-logo: #39ff14;
 }
 
-/* Light palette — used by the explicit attribute set by src/theme.js. */
+/* ── Deep Blue. ── */
+:root[data-theme='blue'] {
+  color-scheme: dark;
+  --bg: #05070e;
+  --bg-2: #0a0f1d;
+  --surface: #0a0f1d;
+  --surface-2: #0a0f1d;
+  --surface-3: #111a30;
+  --border: #1d2942;
+  --text: #d3ddf2;
+  --text-strong: #eaf1ff;
+  --muted: #5f6c8a;
+  --brand: #3b82f6;
+  --brand-glow: rgba(59, 130, 246, 0.22);
+  --brand-soft: rgba(59, 130, 246, 0.14);
+  --accent: #60a5fa;
+  --accent-2: #8b5cf6;
+  --accent-soft: rgba(96, 165, 250, 0.14);
+  --overlay: rgba(0, 0, 0, 0.6);
+  --tile-bg: rgba(255, 255, 255, 0.03);
+  --dock-bg: rgba(10, 15, 29, 0.78);
+  --dock-border: rgba(96, 165, 250, 0.28);
+  --dock-shadow: rgba(0, 0, 0, 0.6);
+  --body-glow-1: rgba(59, 130, 246, 0.09);
+  --body-glow-2: rgba(139, 92, 246, 0.07);
+  --header-bg: #000000;
+  --header-border: rgba(255, 255, 255, 0.14);
+  --header-text: #d3ddf2;
+  --header-fg: #8593b0;
+  --header-logo: #60a5fa;
+}
+
+/* ── Light. ── */
 :root[data-theme='light'] {
   color-scheme: light;
-  --bg: #fafafb;
-  --bg-2: #eef0f3;
+  --bg: #eef1f6;
+  --bg-2: #e9edf4;
   --surface: #ffffff;
   --surface-2: #ffffff;
-  --surface-3: #eef0f2;
-  --border: #ccd0d6;
-  --text: #2b2f36;
-  --text-strong: #14171c;
-  --muted: #6b7280;
-  --brand: #0f8a37;
-  --brand-glow: rgba(15, 138, 55, 0.22);
-  --brand-soft: rgba(15, 138, 55, 0.1);
-  --accent: #0b7f76;
+  --surface-3: #e9edf4;
+  --border: #d5dce8;
+  --text: #1b2331;
+  --text-strong: #0b1220;
+  --muted: #5c6781;
+  --brand: #2563eb;
+  --brand-glow: rgba(37, 99, 235, 0.18);
+  --brand-soft: rgba(37, 99, 235, 0.1);
+  --accent: #1d4ed8;
   --accent-2: #c31d6e;
-  --accent-soft: rgba(11, 127, 118, 0.12);
+  --accent-soft: rgba(29, 78, 216, 0.1);
   --overlay: rgba(20, 22, 26, 0.32);
   --tile-bg: rgba(0, 0, 0, 0.03);
-  --dock-bg: rgba(255, 255, 255, 0.72);
-  --dock-border: rgba(11, 127, 118, 0.28);
-  --body-glow-1: rgba(11, 127, 118, 0.06);
+  --dock-bg: rgba(255, 255, 255, 0.78);
+  --dock-border: rgba(29, 78, 216, 0.24);
+  --dock-shadow: rgba(30, 41, 70, 0.18);
+  --body-glow-1: rgba(37, 99, 235, 0.06);
   --body-glow-2: rgba(195, 29, 110, 0.05);
+  --header-bg: #000000;
+  --header-border: rgba(255, 255, 255, 0.16);
+  --header-text: #e8ecf3;
+  --header-fg: #cbd5e1;
+  --header-logo: #60a5fa;
 }
 
-/* Fallback for the brief moment before src/theme.js runs, or if JS is off. */
+/* ── GitHub — Primer dark. ── */
+:root[data-theme='github'] {
+  color-scheme: dark;
+  --bg: #0d1117;
+  --bg-2: #161b22;
+  --surface: #161b22;
+  --surface-2: #161b22;
+  --surface-3: #21262d;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-strong: #ffffff;
+  --muted: #8b949e;
+  --brand: #2f81f7;
+  --brand-glow: rgba(47, 129, 247, 0.2);
+  --brand-soft: rgba(47, 129, 247, 0.15);
+  --accent: #58a6ff;
+  --accent-2: #a371f7;
+  --accent-soft: rgba(88, 166, 255, 0.15);
+  --overlay: rgba(1, 4, 9, 0.68);
+  --tile-bg: rgba(255, 255, 255, 0.03);
+  --dock-bg: rgba(22, 27, 34, 0.82);
+  --dock-border: rgba(88, 166, 255, 0.26);
+  --dock-shadow: rgba(1, 4, 9, 0.6);
+  --body-glow-1: rgba(47, 129, 247, 0.08);
+  --body-glow-2: rgba(163, 113, 247, 0.06);
+  --header-bg: #010409;
+  --header-border: #30363d;
+  --header-text: #e6edf3;
+  --header-fg: #8b949e;
+  --header-logo: #58a6ff;
+}
+
+/* ── Amber. ── */
+:root[data-theme='amber'] {
+  color-scheme: dark;
+  --bg: #0d0f14;
+  --bg-2: #141820;
+  --surface: #141820;
+  --surface-2: #141820;
+  --surface-3: #1c2130;
+  --border: #252d3d;
+  --text: #dde3ef;
+  --text-strong: #f4f7ff;
+  --muted: #6b7794;
+  --brand: #f59e0b;
+  --brand-glow: rgba(245, 158, 11, 0.24);
+  --brand-soft: rgba(245, 158, 11, 0.14);
+  --accent: #fbbf24;
+  --accent-2: #f97316;
+  --accent-soft: rgba(251, 191, 36, 0.13);
+  --overlay: rgba(0, 0, 0, 0.62);
+  --tile-bg: rgba(255, 255, 255, 0.03);
+  --dock-bg: rgba(20, 24, 32, 0.8);
+  --dock-border: rgba(251, 191, 36, 0.26);
+  --dock-shadow: rgba(0, 0, 0, 0.6);
+  --body-glow-1: rgba(245, 158, 11, 0.08);
+  --body-glow-2: rgba(249, 115, 22, 0.06);
+  --header-bg: #000000;
+  --header-border: rgba(255, 255, 255, 0.14);
+  --header-text: #dde3ef;
+  --header-fg: #f0b45f;
+  --header-logo: #fbbf24;
+}
+
+/* Fallback for the brief moment before src/theme.js runs, or if JS is off:
+   a light desktop gets the Light palette instead of a flash of neon. An
+   explicit [data-theme] always wins — it's the more specific selector. */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme]) {
     color-scheme: light;
-    --bg: #fafafb;
-    --bg-2: #eef0f3;
+    --bg: #eef1f6;
+    --bg-2: #e9edf4;
     --surface: #ffffff;
     --surface-2: #ffffff;
-    --surface-3: #eef0f2;
-    --border: #ccd0d6;
-    --text: #2b2f36;
-    --text-strong: #14171c;
-    --muted: #6b7280;
-    --brand: #0f8a37;
-    --brand-glow: rgba(15, 138, 55, 0.22);
-    --brand-soft: rgba(15, 138, 55, 0.1);
-    --accent: #0b7f76;
+    --surface-3: #e9edf4;
+    --border: #d5dce8;
+    --text: #1b2331;
+    --text-strong: #0b1220;
+    --muted: #5c6781;
+    --brand: #2563eb;
+    --brand-glow: rgba(37, 99, 235, 0.18);
+    --brand-soft: rgba(37, 99, 235, 0.1);
+    --accent: #1d4ed8;
     --accent-2: #c31d6e;
-    --accent-soft: rgba(11, 127, 118, 0.12);
+    --accent-soft: rgba(29, 78, 216, 0.1);
     --overlay: rgba(20, 22, 26, 0.32);
     --tile-bg: rgba(0, 0, 0, 0.03);
-    --dock-bg: rgba(255, 255, 255, 0.72);
-    --dock-border: rgba(11, 127, 118, 0.28);
-    --body-glow-1: rgba(11, 127, 118, 0.06);
+    --dock-bg: rgba(255, 255, 255, 0.78);
+    --dock-border: rgba(29, 78, 216, 0.24);
+    --dock-shadow: rgba(30, 41, 70, 0.18);
+    --body-glow-1: rgba(37, 99, 235, 0.06);
     --body-glow-2: rgba(195, 29, 110, 0.05);
+    --header-bg: #000000;
+    --header-border: rgba(255, 255, 255, 0.16);
+    --header-text: #e8ecf3;
+    --header-fg: #cbd5e1;
+    --header-logo: #60a5fa;
   }
 }
 
@@ -110,6 +238,6 @@ body {
     var(--bg);
   color: var(--text);
   overflow: hidden;
-  /* Smooth the moment the desktop theme flips. */
+  /* Smooth the moment the theme changes. */
   transition: background-color 0.2s ease, color 0.2s ease;
 }

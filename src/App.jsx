@@ -2,10 +2,13 @@ import { useState, useEffect, useRef } from 'react'
 import { apps } from './apps.config.js'
 import { useHealth } from './useHealth.js'
 import { useTheme } from './useTheme.js'
-import { isTauri } from './theme.js'
+import { isTauri, THEMES } from './theme.js'
+import { usePref } from './usePrefs.js'
 import { useNativeStage, readRect } from './useNativeStage.js'
 import * as nativeStage from './nativeStage.js'
 import Dock from './components/Dock.jsx'
+import Settings from './components/Settings.jsx'
+import { ReloadIcon, InfoIcon, SettingsIcon, CloseIcon } from './components/Icons.jsx'
 import './App.css'
 
 const NATIVE = isTauri()
@@ -62,6 +65,11 @@ export default function App() {
   const [reloadNonce, setReloadNonce] = useState({})
   // Whether the About / help overlay is open.
   const [helpOpen, setHelpOpen] = useState(false)
+  // Whether the Settings dialog is open.
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  // Dock layout, chosen in Settings ▸ Preferences and persisted.
+  const [dockPosition, setDockPosition] = usePref('dockPosition')
+  const [dockSize, setDockSize] = usePref('dockSize')
   // Live reachability of each app: { [id]: 'checking' | 'up' | 'down' }.
   const health = useHealth(apps)
   // The DOM element the native stage webview is positioned to overlay (Tauri).
@@ -150,8 +158,9 @@ export default function App() {
       if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
 
       if (e.key === 'Escape') {
-        // Esc closes the help overlay first, otherwise returns Home.
-        if (helpOpen) setHelpOpen(false)
+        // Esc closes whatever panel is open first, otherwise returns Home.
+        if (settingsOpen) setSettingsOpen(false)
+        else if (helpOpen) setHelpOpen(false)
         else setActiveId(null)
       } else if (e.key === '?') {
         setHelpOpen((v) => !v)
@@ -167,13 +176,14 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [orderedApps, activeId, helpOpen])
+  }, [orderedApps, activeId, helpOpen, settingsOpen])
 
   // Drive the native child webviews from state (inert in a plain browser). We
   // hide the active webview whenever an HTML layer must show through it, since
   // native webviews float above all HTML in the shell window.
   const htmlCoversStage =
     helpOpen ||
+    settingsOpen ||
     (!!active && (blocked[active.id] || health[active.id] === 'down'))
   useNativeStage({
     enabled: USE_WEBVIEW,
@@ -183,13 +193,18 @@ export default function App() {
   })
 
   return (
-    <div className="app">
+    // The dock modifiers live on the root so the stage can leave the right
+    // band clear (see .app--dock-right in App.css) — the native webview can't
+    // be overlapped by HTML, so the clearance has to be real layout, not a
+    // z-index trick.
+    <div className={`app app--dock-${dockPosition} app--dock-${dockSize}`}>
       {/* Thin bar that always sits above every app frame; carries CyberDash's
           own controls so they never overlap an app's content. */}
       <TopBar
         canReload={!!active && !blocked[active.id]}
         onReload={() => active && reloadApp(active.id)}
         onHelp={() => setHelpOpen(true)}
+        onSettings={() => setSettingsOpen(true)}
       />
 
       <main className="stage">
@@ -257,6 +272,8 @@ export default function App() {
         apps={orderedApps}
         activeId={activeId}
         health={health}
+        position={dockPosition}
+        size={dockSize}
         onLaunch={launch}
         onReorder={reorder}
         onHome={() => setActiveId(null)}
@@ -265,35 +282,54 @@ export default function App() {
       {helpOpen && (
         <HelpOverlay appCount={apps.length} onClose={() => setHelpOpen(false)} />
       )}
+
+      {settingsOpen && (
+        <Settings
+          prefs={{ dockPosition, setDockPosition, dockSize, setDockSize }}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
     </div>
   )
 }
 
 // The persistent top bar — CyberDash's own chrome, always shown regardless of
 // which app is framed below (each embedded app already shows its own title).
-// Left: the CyberDash wordmark. Right: reload-this-app and an About/help toggle.
-function TopBar({ canReload, onReload, onHelp }) {
+// Left: the CyberDash wordmark. Right: an action cluster matching SecAnalysis's
+// — 34px monochrome .icon-btn buttons carrying the same stroke-SVG glyphs, on
+// the same near-black bar (--header-*), so the two apps' chrome is identical.
+function TopBar({ canReload, onReload, onHelp, onSettings }) {
   return (
     <header className="app-bar">
       <span className="app-bar-title">CyberDash</span>
-      <div className="app-bar-actions">
+      <div className="header-actions">
         {canReload && (
           <button
-            className="bar-btn"
+            className="icon-btn"
             onClick={onReload}
             title="Reload this app  (r)"
             aria-label="Reload current app"
           >
-            ↻
+            <ReloadIcon />
           </button>
         )}
         <button
-          className="bar-btn"
+          className="icon-btn"
           onClick={onHelp}
           title="About CyberDash  (?)"
           aria-label="About CyberDash"
+          aria-haspopup="dialog"
         >
-          ?
+          <InfoIcon />
+        </button>
+        <button
+          className="icon-btn"
+          onClick={onSettings}
+          title="Settings"
+          aria-label="Settings"
+          aria-haspopup="dialog"
+        >
+          <SettingsIcon />
         </button>
       </div>
     </header>
@@ -304,6 +340,7 @@ function TopBar({ canReload, onReload, onHelp }) {
 // (both handled by the global key handler in App).
 function HelpOverlay({ appCount, onClose }) {
   const theme = useTheme()
+  const themeName = THEMES.find((t) => t.id === theme)?.name || theme
   const source = isTauri() ? 'GNOME desktop' : 'browser (prefers-color-scheme)'
   return (
     <div className="help-overlay" onClick={onClose}>
@@ -313,8 +350,8 @@ function HelpOverlay({ appCount, onClose }) {
         aria-label="About CyberDash"
         onClick={(e) => e.stopPropagation()}
       >
-        <button className="help-close" onClick={onClose} aria-label="Close">
-          ×
+        <button className="icon-btn help-close" onClick={onClose} aria-label="Close">
+          <CloseIcon />
         </button>
         <h2 className="help-title">CyberDash</h2>
         <p className="help-text">
@@ -355,8 +392,9 @@ function HelpOverlay({ appCount, onClose }) {
           dock first if you’ve been typing inside an app.
         </p>
         <p className="help-theme">
-          Theme: <strong>{theme}</strong> — following your {source}. Flip your
-          desktop’s Light/Dark style and CyberDash follows instantly.
+          Theme: <strong>{themeName}</strong> — change it in Settings ▸
+          Appearance. On <em>Auto</em> it follows your {source}, so flipping
+          your desktop’s Light/Dark style restyles CyberDash instantly.
         </p>
         <p className="help-theme">
           Shell origin: <strong>{window.location.origin}</strong> — this is the
