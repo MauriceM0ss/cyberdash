@@ -13,10 +13,15 @@
   `src-tauri/tauri.conf.json`, so Tauri follows the OS colour-scheme. The
   frontend (`src/theme.js`) reads it via `@tauri-apps/api`'s
   `getCurrentWindow().theme()` and subscribes to `onThemeChanged`, then stamps
-  `data-theme="light|dark"` on `<html>`. Every colour token in `src/index.css`
-  keys off that, so flipping **Settings ▸ Appearance ▸ Dark/Light** restyles
-  CyberDash live, no restart. Open the About panel (`?`) to see the active
-  theme and its source.
+  the matching palette id on `<html>` as `data-theme`. Every colour token in
+  `src/index.css` keys off that, so flipping GNOME's **Settings ▸ Appearance ▸
+  Dark/Light** restyles CyberDash live, no restart.
+
+  This is what CyberDash's own **Settings ▸ Appearance ▸ Theme = Auto** means
+  (the default). Picking one of the five explicit palettes instead pins it and
+  stops consulting the desktop — the `onThemeChanged` subscription stays up,
+  it just no longer changes what's applied. Open the About panel (`?`) to see
+  the active theme.
 - The same code runs in a plain browser (`docker compose up`), where it falls
   back to the `prefers-color-scheme` media query.
 

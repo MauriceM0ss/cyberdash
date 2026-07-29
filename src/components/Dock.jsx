@@ -10,9 +10,24 @@ const HEALTH_LABEL = {
 // or a path to an image in /public served from the root (e.g. '/icons/cyberdash.png').
 const HOME_ICON = '/icons/cyberdash.png'
 
-// A floating dock. Icons stay a fixed size; each carries a live health light.
-// Icons can be dragged to reorder them (order is persisted by the parent).
-export default function Dock({ apps, activeId, health = {}, onLaunch, onReorder, onHome }) {
+// A floating dock. Each icon carries a live health light, and icons can be
+// dragged to reorder them (order is persisted by the parent).
+//
+// `position` ('bottom' | 'right') and `size` ('normal' | 'medium' | 'small')
+// come from Settings ▸ Preferences and only add a modifier class — the whole
+// layout, including the icon size and whether the strip runs across or down,
+// is CSS (see App.css). App.jsx keeps the stage clear of whichever edge the
+// dock is on.
+export default function Dock({
+  apps,
+  activeId,
+  health = {},
+  position = 'bottom',
+  size = 'normal',
+  onLaunch,
+  onReorder,
+  onHome,
+}) {
   const [draggingId, setDraggingId] = useState(null)
   const [overId, setOverId] = useState(null)
 
@@ -22,7 +37,10 @@ export default function Dock({ apps, activeId, health = {}, onLaunch, onReorder,
   }
 
   return (
-    <nav className="dock" aria-label="Application dock">
+    <nav
+      className={`dock dock--${position} dock--${size}`}
+      aria-label="Application dock"
+    >
       <div className="dock-inner">
         {apps.map((app) => {
           const state = health[app.id] || 'checking'

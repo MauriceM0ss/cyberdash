@@ -48,6 +48,33 @@ If an app shows an "can't be embedded" message, it sends
 
 Drop image files in `public/icons/` and reference them as `icon: '/icons/foo.png'`.
 
+## Settings
+
+The gear in the top-right opens a tabbed dialog. Everything applies instantly
+and is remembered in this browser (or in the Tauri app's own storage) — there's
+no Save button.
+
+**Appearance ▸ Theme.** The same five palettes as the CyberNewsHub app, ported
+into `src/index.css` as `[data-theme]` blocks:
+
+| Theme | |
+| --- | --- |
+| **Auto** *(default)* | Follows the desktop's Light/Dark style — Dark Terminal when it's dark, Light when it's light — and keeps following it as you flip it |
+| **Dark Terminal** | The original neon-green CyberDash look |
+| **Deep Blue** | |
+| **Light** | |
+| **GitHub** | Primer dark |
+| **Amber** | |
+
+Picking anything other than Auto pins that palette and stops following the
+desktop.
+
+**Preferences ▸ Dock.** *Position* puts the dock along the bottom (default) or
+down the right-hand side; the app area gives up that band, so the dock never
+covers an embedded app. On the right the dock reads as a sidebar — solid black
+in every theme. *Size* is Normal (52 px icons), Medium (44 px), or Small
+(36 px) — the whole dock scales, not just the icons.
+
 ## Production build
 
 ```bash
