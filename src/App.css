@@ -149,7 +149,7 @@
    --border: it has to read against both a light stage and a dark one, and
    against the black dock on the other side. */
 .app--dock-right .stage {
-  border-right: 1px solid rgba(128, 138, 148, 0.45);
+  border-right: 0px solid rgba(6, 10, 13, 0.72);
 }
 
 .app-frame {
