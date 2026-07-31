@@ -25,8 +25,13 @@ async function ping(url) {
   }
 }
 
-// Returns a map of { [app.id]: 'checking' | 'up' | 'down' }, refreshed on an
-// interval. Also re-checks when the tab regains focus.
+// Returns [status, recheck]:
+//   status   { [app.id]: 'checking' | 'up' | 'down' }, refreshed on an interval
+//            and whenever the tab regains focus.
+//   recheck  runs a check immediately. Powering an app on moves the container
+//            in a second but the app needs a moment more to serve, so the
+//            control flow calls this a few times rather than leaving the light
+//            red until the next scheduled tick.
 export function useHealth(apps, interval = INTERVAL) {
   const [status, setStatus] = useState(() =>
     Object.fromEntries(apps.map((a) => [a.id, 'checking'])),
@@ -52,5 +57,5 @@ export function useHealth(apps, interval = INTERVAL) {
     }
   }, [check, interval])
 
-  return status
+  return [status, check]
 }

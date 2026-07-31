@@ -49,3 +49,15 @@ export function CloseIcon({ size = 18 }) {
     </svg>
   )
 }
+
+// Power symbol — used for both directions. The button's colour says which way
+// it goes (accent = start, danger = stop); a single glyph keeps the control in
+// one place rather than swapping shapes under the cursor.
+export function PowerIcon({ size = 16 }) {
+  return (
+    <svg {...base} width={size} height={size}>
+      <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+      <line x1="12" y1="2" x2="12" y2="12" />
+    </svg>
+  )
+}
