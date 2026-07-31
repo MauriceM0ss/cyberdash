@@ -71,8 +71,9 @@ desktop.
 
 **Preferences ▸ Dock.** *Position* puts the dock along the bottom (default) or
 down the right-hand side; the app area gives up that band, so the dock never
-covers an embedded app. On the right the dock reads as a sidebar — solid black
-in every theme. *Size* is Normal (52 px icons), Medium (44 px), or Small
+covers an embedded app. On the right the dock reads as a sidebar — the whole
+band is solid black in every theme, with no rule along the boundary, so it
+meets the app area edge to edge. *Size* is Normal (52 px icons), Medium (44 px), or Small
 (36 px) — the whole dock scales, not just the icons.
 
 ## Production build

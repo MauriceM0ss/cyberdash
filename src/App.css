@@ -481,18 +481,22 @@
   z-index: 10;
 }
 
-/* Right-hand dock: a vertical strip filling the stage's height, with the
-   pill centred in it. Laid out as a flex container rather than a
-   translateY(-50%) trick so a tall dock can scroll instead of overflowing off
-   the top of the window. */
+/* Right-hand dock: it owns the whole band the stage gave up (--dock-clear-x),
+   not just the width of its icons, so the band is a real black sidebar pane
+   rather than a floating pill over the body backdrop. Laid out as a flex
+   container rather than a translateY(-50%) trick so a tall dock can scroll
+   instead of overflowing off the top of the window. */
 .dock--right {
   left: auto;
-  right: 18px;
+  right: 0;
+  width: var(--dock-clear-x);
   top: var(--bar-h);
   bottom: 0;
   transform: none;
   display: flex;
   align-items: center;
+  justify-content: center;
+  background: #000;
 }
 
 .dock-inner {
@@ -511,10 +515,15 @@
 }
 
 /* On the right the dock reads as a sidebar rather than a floating pill, so it
-   goes solid black in every theme — the same call the top bar makes (see
-   --header-bg). The accent-tinted outline and inset highlight stay. */
+   drops every edge it has — outline, rounding, glow, blur — and lets the black
+   band behind it show as one flat surface. Nothing then draws a boundary
+   between the viewing area and the dock: the two panes meet edge to edge. */
 .dock--right .dock-inner {
-  background: #000;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
   flex-direction: column;
   /* More apps than fit the window height: scroll the dock rather than let it
      run off the top and bottom. */
