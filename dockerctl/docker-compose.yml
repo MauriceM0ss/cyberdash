@@ -1,0 +1,33 @@
+services:
+  dockerctl:
+    build: .
+    image: dockerctl
+    container_name: dockerctl
+    restart: unless-stopped
+    ports:
+      # host:container — 8033 on the host. Bound to loopback only: this is a
+      # privileged control surface and has no business being on the LAN. Drop
+      # the 127.0.0.1 prefix only if you know you want that.
+      - "127.0.0.1:8033:8080"
+    volumes:
+      # The Docker socket. Note there is deliberately no ":ro" here — it would
+      # be security theatre: read-only applies to the socket *file*, and you can
+      # still POST every write operation through it. The real containment is in
+      # the service itself, which only knows how to start/stop the containers
+      # named in apps.json.
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./apps.json:/config/apps.json:ro
+    environment:
+      # Required. Generate with: openssl rand -hex 32
+      # Set it in a .env file next to this compose file, not inline here.
+      DOCKERCTL_TOKEN: "${DOCKERCTL_TOKEN:?set DOCKERCTL_TOKEN in .env}"
+      # Origins allowed to call the API. The browser dashboard and the .deb.
+      ALLOWED_ORIGINS: "http://localhost:5173,tauri://localhost"
+      APPS_FILE: /config/apps.json
+    # The container process runs as uid 10001 (see Dockerfile). This adds the
+    # host's `docker` group so it can open the socket without being root.
+    # 981 is this host's docker GID — check yours with: getent group docker
+    group_add:
+      - "981"
+    security_opt:
+      - no-new-privileges:true
