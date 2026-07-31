@@ -68,7 +68,9 @@
   justify-content: space-between;
   padding: 0 8px 0 12px;
   background: var(--header-bg);
-  border-bottom: 1px solid var(--header-border);
+  /* Bar / stage boundary — a pane rule (see --pane-rule in index.css), not the
+     bar's own outline, so it goes quiet with all the others. */
+  border-bottom: 1px solid var(--pane-rule);
 }
 
 .app-bar-title {
@@ -263,7 +265,7 @@
 .help-theme {
   margin: 14px 0 0;
   padding-top: 12px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--pane-rule);
   color: var(--muted);
   font-size: 12px;
   letter-spacing: 0.5px;
@@ -481,18 +483,22 @@
   z-index: 10;
 }
 
-/* Right-hand dock: a vertical strip filling the stage's height, with the
-   pill centred in it. Laid out as a flex container rather than a
-   translateY(-50%) trick so a tall dock can scroll instead of overflowing off
-   the top of the window. */
+/* Right-hand dock: it owns the whole band the stage gave up (--dock-clear-x),
+   not just the width of its icons, so the band is a real black sidebar pane
+   rather than a floating pill over the body backdrop. Laid out as a flex
+   container rather than a translateY(-50%) trick so a tall dock can scroll
+   instead of overflowing off the top of the window. */
 .dock--right {
   left: auto;
-  right: 18px;
+  right: 0;
+  width: var(--dock-clear-x);
   top: var(--bar-h);
   bottom: 0;
   transform: none;
   display: flex;
   align-items: center;
+  justify-content: center;
+  background: #000;
 }
 
 .dock-inner {
@@ -511,10 +517,15 @@
 }
 
 /* On the right the dock reads as a sidebar rather than a floating pill, so it
-   goes solid black in every theme — the same call the top bar makes (see
-   --header-bg). The accent-tinted outline and inset highlight stay. */
+   drops every edge it has — outline, rounding, glow, blur — and lets the black
+   band behind it show as one flat surface. Nothing then draws a boundary
+   between the viewing area and the dock: the two panes meet edge to edge. */
 .dock--right .dock-inner {
-  background: #000;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
   flex-direction: column;
   /* More apps than fit the window height: scroll the dock rather than let it
      run off the top and bottom. */
@@ -703,7 +714,7 @@
   display: flex;
   gap: 2px;
   flex-shrink: 0;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--pane-rule);
 }
 
 .settings-tab {

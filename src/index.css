@@ -218,6 +218,25 @@
   }
 }
 
+/* ── Pane rule ──────────────────────────────────────────────────────────────
+   The 1px lines that divide one structural region from another: top bar from
+   stage, tab strip from panel, section from section. Split out of --border so
+   they can be switched off in one place without also flattening the cards,
+   tiles, inputs and kbd chips that share that token.
+
+   Declared once, outside the [data-theme] blocks on purpose: var() resolves at
+   use time, so `var(--border)` here means "whichever theme is live" — the
+   switch works across all five palettes without touching any of them.
+
+     transparent    lines off (current)
+     var(--border)  lines back on, theme-correct
+
+   The same token exists in the sibling apps' style.css, so the family stays in
+   step. Element outlines never use it. */
+:root {
+  --pane-rule: transparent;
+}
+
 * {
   box-sizing: border-box;
 }
