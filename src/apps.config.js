@@ -19,36 +19,44 @@ export const apps = [
   {
     id: 'myhours',
     name: 'MyHours',
-    icon: '/icons/myhours.png',
+    icon: '/icons/myhours.svg',
     url: 'http://localhost:8026',
     embed: true,
   },
   {
     id: 'cybernewshub',
     name: 'CyberNewsHub',
-    icon: '/icons/cybernewshub.png',
+    icon: '/icons/cybernewshub.svg',
     url: 'http://localhost:8030',
     embed: true,
   },
   {
     id: 'secanalysis',
     name: 'SecAnalysis',
-    icon: '/icons/secanalysis.png',
+    icon: '/icons/secanalysis.svg',
     url: 'http://localhost:8090',
     embed: true,
   },
   {
     id: 'peoplemanager',
     name: 'PeopleManager',
-    icon: '/icons/peoplemanager.png',
+    icon: '/icons/peoplemanager.svg',
     url: 'http://localhost:8081',
+    embed: true, // CSP frame-ancestors must allow both the browser shell
+    //              (http://localhost:5173) and the native .deb (tauri://localhost)
+  },
+  {
+    id: 'rcdb',
+    name: 'Retro Computer DB',
+    icon: '/icons/rcdb.svg',
+    url: 'http://localhost:8031',
     embed: true, // CSP frame-ancestors must allow both the browser shell
     //              (http://localhost:5173) and the native .deb (tauri://localhost)
   },
   {
     id: 'subscriptions',
     name: 'Subscriptions',
-    icon: '/icons/subscriptions.png',
+    icon: '/icons/subscriptions.svg',
     url: 'http://localhost:8032',
     embed: true,
   }

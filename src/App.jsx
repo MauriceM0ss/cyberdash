@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react'
-import { apps } from './apps.config.js'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { useAppRegistry } from './useAppRegistry.js'
 import { useHealth } from './useHealth.js'
+import { useAppControl, powerState } from './useAppControl.js'
 import { useTheme } from './useTheme.js'
 import { isTauri, THEMES } from './theme.js'
 import { usePref } from './usePrefs.js'
@@ -8,7 +9,13 @@ import { useNativeStage, readRect } from './useNativeStage.js'
 import * as nativeStage from './nativeStage.js'
 import Dock from './components/Dock.jsx'
 import Settings from './components/Settings.jsx'
-import { ReloadIcon, InfoIcon, SettingsIcon, CloseIcon } from './components/Icons.jsx'
+import {
+  ReloadIcon,
+  InfoIcon,
+  SettingsIcon,
+  CloseIcon,
+  PowerIcon,
+} from './components/Icons.jsx'
 import './App.css'
 
 const NATIVE = isTauri()
@@ -27,34 +34,43 @@ const USE_WEBVIEW = NATIVE && EMBED_MODE === 'webview'
 const ORDER_KEY = 'cyberdash.dockOrder'
 const ACTIVE_KEY = 'cyberdash.activeId'
 
-// Restore the last-open app across refreshes — but only if that app still
-// exists in the config and is embeddable. (We never auto-reopen a non-embed app
-// on load, since that would pop a new browser tab the moment CyberDash starts.)
-function loadActive() {
-  const id = localStorage.getItem(ACTIVE_KEY)
-  const app = apps.find((a) => a.id === id)
-  return app && app.embed ? id : null
+// The last-open app id, as stored. It's validated against the live app list in
+// App below rather than here, because apps can now be added and removed at
+// runtime — a stored id may stop being valid long after load.
+function loadActiveId() {
+  try {
+    return localStorage.getItem(ACTIVE_KEY)
+  } catch {
+    return null
+  }
 }
 
-// Build the dock order from the saved arrangement, reconciled with the current
-// config: keep saved ids that still exist (in saved order), drop removed ones,
-// and append any newly-added apps at the end.
 function loadOrder() {
-  let saved = []
   try {
-    saved = JSON.parse(localStorage.getItem(ORDER_KEY)) || []
+    const saved = JSON.parse(localStorage.getItem(ORDER_KEY))
+    return Array.isArray(saved) ? saved : []
   } catch {
-    saved = []
+    return []
   }
+}
+
+// Reconcile a saved dock arrangement against the live app list: keep saved ids
+// that still exist (in saved order), drop removed ones, append new ones at the
+// end. Returns the original array when nothing changed, so it can be used in an
+// effect without looping.
+function reconcileOrder(saved, apps) {
   const ids = apps.map((a) => a.id)
-  const ordered = saved.filter((id) => ids.includes(id))
-  for (const id of ids) if (!ordered.includes(id)) ordered.push(id)
-  return ordered
+  const kept = saved.filter((id) => ids.includes(id))
+  const added = ids.filter((id) => !kept.includes(id))
+  const next = [...kept, ...added]
+  const same =
+    next.length === saved.length && next.every((id, i) => id === saved[i])
+  return same ? saved : next
 }
 
 export default function App() {
   // The currently open app (null = home screen). Restored from the last session.
-  const [activeId, setActiveId] = useState(loadActive)
+  const [activeId, setActiveId] = useState(loadActiveId)
   // Apps whose iframe failed to load (blocked by X-Frame-Options / CSP).
   const [blocked, setBlocked] = useState({})
   // User-defined dock order (array of app ids), persisted to localStorage.
@@ -70,14 +86,50 @@ export default function App() {
   // Dock layout, chosen in Settings ▸ Preferences and persisted.
   const [dockPosition, setDockPosition] = usePref('dockPosition')
   const [dockSize, setDockSize] = usePref('dockSize')
+  // apps.config.js layered with the edits, additions and removals made in
+  // Settings ▸ Apps. `apps` is memoised inside the hook, so the pollers below
+  // only restart when the list genuinely changes.
+  const registry = useAppRegistry()
+  const apps = registry.apps
   // Live reachability of each app: { [id]: 'checking' | 'up' | 'down' }.
-  const health = useHealth(apps)
+  const [health, recheckHealth] = useHealth(apps)
+  // Container state + power controls, via the dockerctl helper. Inert (and no
+  // buttons are shown) until it's configured in Settings ▸ Power.
+  const appControl = useAppControl()
   // The DOM element the native stage webview is positioned to overlay (Tauri).
   const stageSlotRef = useRef(null)
+
+  // A container starts in about a second, but the app inside it needs longer
+  // before it answers HTTP. Re-check health a few times over the next ~10s so
+  // the lights catch up promptly instead of sitting wrong until the next tick.
+  const kickTimers = useRef([])
+  const kickHealth = useCallback(() => {
+    kickTimers.current.forEach(clearTimeout)
+    kickTimers.current = [700, 2500, 5000, 9000].map((d) =>
+      setTimeout(recheckHealth, d),
+    )
+  }, [recheckHealth])
+  useEffect(() => () => kickTimers.current.forEach(clearTimeout), [])
+
+  // Every power action re-checks health when it settles, so callers downstream
+  // (dock menu, home tile, offline notice) don't each have to remember to.
+  const control = useMemo(
+    () => ({ ...appControl, run: (id, action) => appControl.run(id, action, kickHealth) }),
+    [appControl, kickHealth],
+  )
 
   useEffect(() => {
     localStorage.setItem(ORDER_KEY, JSON.stringify(order))
   }, [order])
+
+  // Keep the dock arrangement and the open app in step with the app list, which
+  // Settings ▸ Apps can change at any time: a newly added app joins the end of
+  // the dock, and closing over a removed one drops you back Home rather than
+  // leaving a dead frame on screen.
+  useEffect(() => {
+    setOrder((prev) => reconcileOrder(prev, apps))
+    setActiveId((prev) => (prev && !apps.some((a) => a.id === prev) ? null : prev))
+  }, [apps])
 
   // Remember which app is open (or clear it for the home screen) so a refresh
   // reopens where you left off.
@@ -111,7 +163,10 @@ export default function App() {
     .map((id) => apps.find((a) => a.id === id))
     .filter(Boolean)
 
-  const active = apps.find((a) => a.id === activeId) || null
+  // Only embeddable apps are ever "active" — launching a non-embed app opens a
+  // tab instead. The guard also covers a stored id whose app has since been
+  // edited to embed:false.
+  const active = apps.find((a) => a.id === activeId && a.embed) || null
 
   // Move the dragged icon so it lands before (drag left) or after (drag right)
   // the icon it was dropped on.
@@ -154,14 +209,23 @@ export default function App() {
   useEffect(() => {
     function onKey(e) {
       if (e.metaKey || e.ctrlKey || e.altKey) return // leave browser combos alone
+
+      // Esc closes our own panels even when focus is in one of their fields.
+      // This is checked before the input guard below on purpose: Settings no
+      // longer closes on a backdrop click, so without this you'd have no
+      // keyboard way out while typing in it.
+      if (e.key === 'Escape' && (settingsOpen || helpOpen)) {
+        if (settingsOpen) setSettingsOpen(false)
+        else setHelpOpen(false)
+        e.preventDefault()
+        return
+      }
+
       const el = e.target
       if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
 
       if (e.key === 'Escape') {
-        // Esc closes whatever panel is open first, otherwise returns Home.
-        if (settingsOpen) setSettingsOpen(false)
-        else if (helpOpen) setHelpOpen(false)
-        else setActiveId(null)
+        setActiveId(null) // no panel open — Esc goes Home
       } else if (e.key === '?') {
         setHelpOpen((v) => !v)
       } else if (e.key >= '1' && e.key <= '9') {
@@ -210,7 +274,12 @@ export default function App() {
       <main className="stage">
         {/* Home screen — shown when no app is open. */}
         {!active && (
-          <Home apps={orderedApps} health={health} onLaunch={launch} />
+          <Home
+            apps={orderedApps}
+            health={health}
+            control={control}
+            onLaunch={launch}
+          />
         )}
 
         {/* Blocked notice — shown when the active app refuses to be framed. */}
@@ -220,7 +289,7 @@ export default function App() {
             back to the live frame automatically once health returns (see the
             auto-recovery effect above). */}
         {active && !blocked[active.id] && health[active.id] === 'down' && (
-          <OfflineNotice app={active} />
+          <OfflineNotice app={active} control={control} />
         )}
 
         {/* NATIVE (Tauri): a native child webview per app floats over this
@@ -274,10 +343,19 @@ export default function App() {
         health={health}
         position={dockPosition}
         size={dockSize}
+        control={control}
         onLaunch={launch}
         onReorder={reorder}
         onHome={() => setActiveId(null)}
       />
+
+      {/* Connection-level trouble with the helper, reported once rather than
+          on every tile. Action failures surface here too. */}
+      {control.error && (
+        <div className="control-error" role="status">
+          Power controls: {control.error}
+        </div>
+      )}
 
       {helpOpen && (
         <HelpOverlay appCount={apps.length} onClose={() => setHelpOpen(false)} />
@@ -286,6 +364,8 @@ export default function App() {
       {settingsOpen && (
         <Settings
           prefs={{ dockPosition, setDockPosition, dockSize, setDockSize }}
+          control={control}
+          registry={registry}
           onClose={() => setSettingsOpen(false)}
         />
       )}
@@ -408,7 +488,7 @@ function HelpOverlay({ appCount, onClose }) {
 
 const HEALTH_LABEL = { checking: 'checking…', up: 'online', down: 'offline' }
 
-function Home({ apps, health, onLaunch }) {
+function Home({ apps, health, control, onLaunch }) {
   return (
     <div className="home">
       <h1 className="home-title">CyberDash</h1>
@@ -416,20 +496,40 @@ function Home({ apps, health, onLaunch }) {
       <div className="status-grid">
         {apps.map((app) => {
           const state = health[app.id] || 'checking'
+          const power = powerState(app.id, control)
           return (
-            <button
-              key={app.id}
-              className="status-tile"
-              onClick={() => onLaunch(app)}
-              title={`Open ${app.name}`}
-            >
-              <HomeIcon icon={app.icon} name={app.name} />
-              <span className="status-name">{app.name}</span>
-              <span className="status-state">
-                <span className={`status-dot health-${state}`} />
-                {HEALTH_LABEL[state]}
-              </span>
-            </button>
+            // A div, not a button: the power control is a button of its own and
+            // nesting one inside another is invalid. The card's whole area is
+            // still clickable via .status-launch below.
+            <div key={app.id} className="status-tile">
+              <button
+                className="status-launch"
+                onClick={() => onLaunch(app)}
+                title={`Open ${app.name}`}
+              >
+                <HomeIcon icon={app.icon} name={app.name} />
+                <span className="status-name">{app.name}</span>
+                <span className="status-state">
+                  <span className={`status-dot health-${state}`} />
+                  {power.pending ? power.label : HEALTH_LABEL[state]}
+                </span>
+              </button>
+              {power.show && (
+                <button
+                  className={
+                    'status-power' +
+                    (power.running ? ' is-running' : '') +
+                    (power.pending ? ' is-pending' : '')
+                  }
+                  disabled={power.disabled}
+                  title={power.reason || `${power.label} ${app.name}`}
+                  aria-label={`${power.label} ${app.name}`}
+                  onClick={() => power.action && control.run(app.id, power.action)}
+                >
+                  <PowerIcon />
+                </button>
+              )}
+            </div>
           )
         })}
       </div>
@@ -475,7 +575,12 @@ function HomeIcon({ icon, name }) {
   )
 }
 
-function OfflineNotice({ app }) {
+function OfflineNotice({ app, control }) {
+  const power = powerState(app.id, control)
+  // The most useful place in the whole dashboard for a Start button: the app is
+  // unreachable, you're already looking at the reason, and the fix is one click.
+  const canStart = power.show && !power.disabled && !power.running
+
   return (
     <div className="home">
       <div className="offline-badge">🔌</div>
@@ -484,9 +589,21 @@ function OfflineNotice({ app }) {
         Can’t reach {app.url}. Retrying every few seconds — this will switch to
         the app automatically the moment it’s back.
       </p>
-      <a className="open-btn" href={app.url} target="_blank" rel="noopener">
-        Open {app.name} ↗
-      </a>
+      {power.pending && <p className="home-sub">{power.label}</p>}
+      {power.reason && <p className="home-sub">{power.reason}</p>}
+      <div className="offline-actions">
+        {canStart && (
+          <button
+            className="open-btn"
+            onClick={() => control.run(app.id, 'start')}
+          >
+            Start {app.name}
+          </button>
+        )}
+        <a className="open-btn" href={app.url} target="_blank" rel="noopener">
+          Open {app.name} ↗
+        </a>
+      </div>
     </div>
   )
 }

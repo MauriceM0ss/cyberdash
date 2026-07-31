@@ -1,0 +1,4 @@
+# Holds DOCKERCTL_TOKEN — never commit this.
+.env
+__pycache__/
+.pytest_cache/
