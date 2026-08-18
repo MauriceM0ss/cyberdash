@@ -24,8 +24,10 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = ["unstable", "devtools"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+tauri-plugin-opener = "2.5.4"
 
 [features]
 # Tauri's custom-protocol is used in release builds to serve the bundled
 # frontend; `tauri dev` doesn't need it.
 custom-protocol = ["tauri/custom-protocol"]
+

@@ -12,6 +12,7 @@
       {
         "label": "main",
         "title": "CyberDash",
+        "create": false,
         "width": 1280,
         "height": 820,
         "minWidth": 860,
