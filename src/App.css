@@ -952,6 +952,10 @@
   border: 1px solid transparent;
   border-radius: 12px;
   cursor: pointer;
+  /* Reordering is a pointer-event drag (see useDockDrag in Dock.jsx), so the
+     browser must not turn the same gesture into a text selection or a pan. */
+  user-select: none;
+  touch-action: none;
   background: var(--accent-soft);
   transition: background 0.14s ease, border-color 0.14s ease,
     box-shadow 0.14s ease;
