@@ -983,26 +983,6 @@
     0 0 16px var(--accent-soft);
 }
 
-/* Running-app pip: under the icon on a bottom dock, beside it on a right one
-   (where "under" would collide with the next icon). */
-.dock-item.is-active::after {
-  content: '';
-  position: absolute;
-  bottom: -7px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 8px var(--accent);
-}
-
-.dock--right .dock-item.is-active::after {
-  bottom: auto;
-  top: 50%;
-  left: -7px;
-  transform: translateY(-50%);
-}
-
 .dock-emoji {
   font-size: var(--dock-emoji);
   line-height: 1;
