@@ -617,15 +617,22 @@
   animation: health-pulse 1.1s ease-in-out infinite;
 }
 
+/* Sits in the top bar's band rather than at the foot of the window, because
+   the foot is stage: in the .deb an app is a native webview layered over the
+   stage, and no HTML can be drawn on top of one. The bar is the only strip of
+   the window that is always shell. */
 .control-error {
   position: fixed;
   left: 50%;
-  bottom: 12px;
+  top: 4px;
   transform: translateX(-50%);
   z-index: 55;
-  max-width: min(90vw, 620px);
-  padding: 8px 14px;
+  max-width: min(60vw, 620px);
+  padding: 6px 14px;
   font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   border: 1px solid #ff5c6c;
   border-radius: 8px;
   background: var(--surface-2);

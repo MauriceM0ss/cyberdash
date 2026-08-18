@@ -5,33 +5,52 @@
 //  webview* per app (Tauri v2 multi-webview, `unstable` feature) layered over
 //  the shell window and positioned to overlay the shell's "stage" rectangle.
 //
-//  Why bother: native webviews are top-level web contents, not frames, so
-//  `X-Frame-Options` / CSP `frame-ancestors` simply don't apply — apps that the
-//  browser refuses to iframe embed just fine here. Health checks, keep-alive,
-//  and per-app reload all still work.
+//  Why bother: native webviews are top-level web contents, not frames, and that
+//  buys two things. `X-Frame-Options` / CSP `frame-ancestors` simply don't
+//  apply, so apps that the browser refuses to iframe embed fine here — and,
+//  more importantly on Linux, the app gets *persistent* storage. WebKitGTK
+//  hands a cross-origin iframe memory-only localStorage, so an iframed app
+//  forgets every preference it saves the moment the window closes (see
+//  TAURI.md). A top-level document keeps them.
 //
-//  The catch this prototype makes you feel: native webviews float ABOVE all
-//  HTML in the main webview. So the shell reserves a band at the bottom for the
-//  dock (it can't overlap a native view) and hides the active webview whenever
-//  an HTML layer must show through (Home, the About panel, offline/blocked
-//  notices). All of that orchestration lives in useNativeStage.js; this module
-//  is the imperative plumbing it drives.
+//  Placement does NOT go through the Tauri webview API. On Linux every webview
+//  Tauri builds is packed into the window's GtkBox, where `setPosition` and
+//  `setSize` do nothing at all; the shell installs a GtkFixed of its own and
+//  positions the webviews there. That's what the `stage_place` / `stage_hide`
+//  commands below are — see src-tauri/src/stage.rs.
+//
+//  The catch this model makes you feel: native webviews float ABOVE all HTML in
+//  the main webview. So the shell reserves a band for the dock (it can't be
+//  overlapped by a native view) and hides the active webview whenever an HTML
+//  layer must show through (Home, the About panel, offline/blocked notices).
+//  All of that orchestration lives in useNativeStage.js; this module is the
+//  imperative plumbing it drives.
 //
 //  Coordinates: the shell measures the stage slot with getBoundingClientRect()
 //  (CSS/logical px, relative to the window content top-left) and hands us that
-//  rect; we position the webview with LogicalPosition/LogicalSize so Tauri
-//  handles the device-pixel-ratio conversion.
+//  rect; the Rust side places the webview in the same logical pixels.
 // ─────────────────────────────────────────────────────────────────────────
 
+import { invoke } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { Webview } from '@tauri-apps/api/webview'
-import { LogicalPosition, LogicalSize } from '@tauri-apps/api/dpi'
 
 // id -> { webview: Webview, ready: Promise<boolean> }
 const views = new Map()
 let activeId = null
 
 const labelFor = (id) => `app__${id}`
+
+const place = (id, rect) =>
+  invoke('stage_place', {
+    label: labelFor(id),
+    x: Math.round(rect.x),
+    y: Math.round(rect.y),
+    width: Math.round(rect.width),
+    height: Math.round(rect.height),
+  })
+
+const conceal = (id) => invoke('stage_hide', { label: labelFor(id) })
 
 // Create (but don't necessarily reveal) the webview for an app at `rect`.
 function createView(app, rect) {
@@ -58,10 +77,7 @@ function createView(app, rect) {
 // Show `app` at `rect`, creating its webview on first use and hiding whichever
 // app was showing before. Kept alive afterwards — switching away only hides.
 export async function showApp(app, rect) {
-  if (activeId && activeId !== app.id) {
-    const prev = views.get(activeId)
-    if (prev && (await prev.ready)) prev.webview.hide().catch(() => {})
-  }
+  if (activeId && activeId !== app.id) conceal(activeId).catch(() => {})
   activeId = app.id
 
   let entry = views.get(app.id)
@@ -72,53 +88,25 @@ export async function showApp(app, rect) {
   if (!ok || activeId !== app.id) return
 
   try {
-    await entry.webview.setPosition(new LogicalPosition(rect.x, rect.y))
-    await entry.webview.setSize(new LogicalSize(rect.width, rect.height))
-    await entry.webview.show()
+    // A freshly created webview is packed into the window's GtkBox and splits
+    // it with the shell until this first placement re-homes it on the stage.
+    await place(app.id, rect)
     await entry.webview.setFocus()
-    if (import.meta.env.DEV) await logPlacement(app, rect, entry.webview)
   } catch (e) {
     console.error('[nativeStage] failed to show webview for', app.id, e)
-  }
-}
-
-// Temporary diagnostic: compare what we asked for (logical px) against what the
-// webview actually reports (physical px), plus the scale factor. Read this in
-// the WebKitGTK inspector console (right-click the top bar → Inspect Element).
-async function logPlacement(app, rect, webview) {
-  try {
-    const [pos, size, scale] = await Promise.all([
-      webview.position(),
-      webview.size(),
-      getCurrentWindow().scaleFactor(),
-    ])
-    console.log(
-      `[nativeStage] placement for ${app.id}\n` +
-        `  requested (logical): x=${rect.x} y=${rect.y} w=${rect.width} h=${rect.height}\n` +
-        `  applied  (physical): x=${pos.x} y=${pos.y} w=${size.width} h=${size.height}\n` +
-        `  scaleFactor=${scale}  devicePixelRatio=${window.devicePixelRatio}\n` +
-        `  window inner (logical): ${window.innerWidth}x${window.innerHeight}`,
-    )
-  } catch (e) {
-    console.warn('[nativeStage] placement diagnostic failed', e)
   }
 }
 
 // Hide every app webview (Home screen, About panel, or an HTML notice showing).
 export async function hideAll() {
   activeId = null
-  for (const entry of views.values()) {
-    if (await entry.ready) entry.webview.hide().catch(() => {})
-  }
+  for (const id of views.keys()) conceal(id).catch(() => {})
 }
 
 // Reposition the currently-shown webview — called on window/stage resize.
 export async function positionActive(rect) {
   if (!activeId) return
-  const entry = views.get(activeId)
-  if (!entry || !(await entry.ready)) return
-  entry.webview.setPosition(new LogicalPosition(rect.x, rect.y)).catch(() => {})
-  entry.webview.setSize(new LogicalSize(rect.width, rect.height)).catch(() => {})
+  place(activeId, rect).catch(() => {})
 }
 
 // Hard-reload an app: native webviews have no in-place navigate here, so we

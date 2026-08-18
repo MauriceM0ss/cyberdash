@@ -35,10 +35,18 @@ export default function Dock({
   onLaunch,
   onReorder,
   onHome,
+  onMenuOpen,
 }) {
   // { id, x, y } for the open power menu, or null.
   const [menu, setMenu] = useState(null)
   const drag = useDockDrag(onReorder)
+
+  // The menu is HTML, and it opens over the stage. In the .deb the stage is a
+  // native webview that no HTML can be drawn on top of, so App has to take the
+  // app off screen for as long as the menu is up.
+  useEffect(() => {
+    onMenuOpen?.(!!menu)
+  }, [menu, onMenuOpen])
 
   // Any click elsewhere, any Esc, or any scroll dismisses the menu — it is
   // positioned in viewport coordinates, so it must not outlive a scroll.

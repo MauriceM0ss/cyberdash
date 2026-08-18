@@ -31,3 +31,6 @@ tauri-plugin-opener = "2.5.4"
 # frontend; `tauri dev` doesn't need it.
 custom-protocol = ["tauri/custom-protocol"]
 
+[target.'cfg(target_os = "linux")'.dependencies]
+gtk = "0.18"
+webkit2gtk = "2.0.2"

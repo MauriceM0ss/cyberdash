@@ -11,6 +11,9 @@ use tauri::webview::NewWindowResponse;
 use tauri::WebviewWindowBuilder;
 use tauri_plugin_opener::OpenerExt;
 
+#[cfg(target_os = "linux")]
+mod stage;
+
 // Schemes we're willing to hand to the desktop's default handler. Requests come
 // from whatever is loaded in the shell — including feed content inside an
 // embedded app — so this stays a strict allow-list rather than a deny-list.
@@ -18,8 +21,15 @@ const EXTERNAL_SCHEMES: [&str; 2] = ["http", "https"];
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_opener::init())
+    let builder = tauri::Builder::default().plugin(tauri_plugin_opener::init());
+
+    #[cfg(target_os = "linux")]
+    let builder = builder.invoke_handler(tauri::generate_handler![
+        stage::stage_place,
+        stage::stage_hide
+    ]);
+
+    builder
         .setup(|app| {
             // The window is declared in tauri.conf.json with `"create": false`
             // so we can build it here instead: `on_new_window` can only be
@@ -53,6 +63,13 @@ pub fn run() {
                     NewWindowResponse::Deny
                 })
                 .build()?;
+
+            // Native stage: the app webviews are placed over the shell inside a
+            // container that stretches nothing by itself, so the shell has to be
+            // told to fill it — now and on every resize. See stage.rs for why
+            // Tauri can't do this for us on Linux.
+            #[cfg(target_os = "linux")]
+            stage::install_shell(app.handle());
 
             Ok(())
         })
