@@ -617,15 +617,22 @@
   animation: health-pulse 1.1s ease-in-out infinite;
 }
 
+/* Sits in the top bar's band rather than at the foot of the window, because
+   the foot is stage: in the .deb an app is a native webview layered over the
+   stage, and no HTML can be drawn on top of one. The bar is the only strip of
+   the window that is always shell. */
 .control-error {
   position: fixed;
   left: 50%;
-  bottom: 12px;
+  top: 4px;
   transform: translateX(-50%);
   z-index: 55;
-  max-width: min(90vw, 620px);
-  padding: 8px 14px;
+  max-width: min(60vw, 620px);
+  padding: 6px 14px;
   font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   border: 1px solid #ff5c6c;
   border-radius: 8px;
   background: var(--surface-2);
@@ -952,6 +959,10 @@
   border: 1px solid transparent;
   border-radius: 12px;
   cursor: pointer;
+  /* Reordering is a pointer-event drag (see useDockDrag in Dock.jsx), so the
+     browser must not turn the same gesture into a text selection or a pan. */
+  user-select: none;
+  touch-action: none;
   background: var(--accent-soft);
   transition: background 0.14s ease, border-color 0.14s ease,
     box-shadow 0.14s ease;
@@ -981,26 +992,6 @@
   box-shadow:
     inset 0 0 0 1px var(--accent-soft),
     0 0 16px var(--accent-soft);
-}
-
-/* Running-app pip: under the icon on a bottom dock, beside it on a right one
-   (where "under" would collide with the next icon). */
-.dock-item.is-active::after {
-  content: '';
-  position: absolute;
-  bottom: -7px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 8px var(--accent);
-}
-
-.dock--right .dock-item.is-active::after {
-  bottom: auto;
-  top: 50%;
-  left: -7px;
-  transform: translateY(-50%);
 }
 
 .dock-emoji {

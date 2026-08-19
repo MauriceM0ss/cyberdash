@@ -21,14 +21,17 @@ import './App.css'
 const NATIVE = isTauri()
 
 // How apps are embedded inside the Tauri shell:
-//   'iframe'  — reliable default; identical to the browser (subject to
-//               X-Frame-Options / CSP, so some apps need embed:false).
-//   'webview' — experimental: one native child webview per app, which bypasses
-//               X-Frame-Options. Broken on WebKitGTK today — the unstable
-//               multi-webview API tiles the webviews 50/50 instead of honoring
-//               our positioning (see TAURI.md). Flip to try it on another OS.
+//   'webview' — one native child webview per app. Each app is then a top-level
+//               document, which is what makes X-Frame-Options irrelevant and,
+//               on WebKitGTK, what makes the app's localStorage persist at all
+//               — a cross-origin iframe there gets memory-only storage, so an
+//               iframed app forgets its every setting on close (see TAURI.md).
+//               Placement is ours, not Tauri's: src-tauri/src/stage.rs.
+//   'iframe'  — identical to the browser, and the fallback if the native stage
+//               ever misbehaves. Subject to X-Frame-Options / CSP, so some apps
+//               need embed:false, and embedded apps can't persist anything.
 // A plain browser always uses iframes regardless.
-const EMBED_MODE = 'iframe' // 'iframe' | 'webview'
+const EMBED_MODE = 'webview' // 'iframe' | 'webview'
 const USE_WEBVIEW = NATIVE && EMBED_MODE === 'webview'
 
 const ORDER_KEY = 'cyberdash.dockOrder'
@@ -83,6 +86,9 @@ export default function App() {
   const [helpOpen, setHelpOpen] = useState(false)
   // Whether the Settings dialog is open.
   const [settingsOpen, setSettingsOpen] = useState(false)
+  // Whether the dock's power menu is up — another HTML layer that has to be
+  // able to show through the stage. See htmlCoversStage below.
+  const [dockMenuOpen, setDockMenuOpen] = useState(false)
   // Dock layout, chosen in Settings ▸ Preferences and persisted.
   const [dockPosition, setDockPosition] = usePref('dockPosition')
   const [dockSize, setDockSize] = usePref('dockSize')
@@ -248,6 +254,7 @@ export default function App() {
   const htmlCoversStage =
     helpOpen ||
     settingsOpen ||
+    dockMenuOpen ||
     (!!active && (blocked[active.id] || health[active.id] === 'down'))
   useNativeStage({
     enabled: USE_WEBVIEW,
@@ -347,6 +354,7 @@ export default function App() {
         onLaunch={launch}
         onReorder={reorder}
         onHome={() => setActiveId(null)}
+        onMenuOpen={setDockMenuOpen}
       />
 
       {/* Connection-level trouble with the helper, reported once rather than

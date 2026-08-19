@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Core capability for the CyberDash shell: read/subscribe to the system theme, and create/position/show/hide the native child webviews that embed each app.",
+  "description": "Core capability for the CyberDash shell: read/subscribe to the system theme, and create, focus and close the native child webviews that embed each app. Positioning and visibility are NOT here — Tauri cannot place webviews on Linux, so the shell does that itself through the stage_place / stage_hide commands in src/stage.rs.",
   "windows": ["main"],
   "webviews": ["main", "app__*"],
   "permissions": [
@@ -10,13 +10,7 @@
     "core:window:allow-set-theme",
     "core:window:allow-scale-factor",
     "core:webview:allow-create-webview",
-    "core:webview:allow-webview-position",
-    "core:webview:allow-webview-size",
-    "core:webview:allow-set-webview-position",
-    "core:webview:allow-set-webview-size",
     "core:webview:allow-set-webview-focus",
-    "core:webview:allow-webview-show",
-    "core:webview:allow-webview-hide",
     "core:webview:allow-webview-close"
   ]
 }

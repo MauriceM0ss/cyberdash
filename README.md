@@ -44,6 +44,11 @@ If an app shows an "can't be embedded" message, it sends
 `X-Frame-Options` / a CSP `frame-ancestors` header. Set `embed: false` for it
 (or use the fallback button that appears).
 
+That applies to the browser build. The native `.deb` embeds each app as a
+*native child webview* instead of an iframe, which is top-level content — so
+those headers don't apply there, and, unlike an iframe on WebKitGTK, the app
+keeps whatever it saves in `localStorage` between launches. See TAURI.md.
+
 ## Custom icons
 
 Drop image files in `public/icons/` and reference them as `icon: '/icons/foo.png'`.
