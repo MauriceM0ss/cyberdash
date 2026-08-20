@@ -59,6 +59,13 @@ export const apps = [
     icon: '/icons/subscriptions.svg',
     url: 'http://localhost:8032',
     embed: true,
+  },
+  {
+    id: 'homenetmon',
+    name: 'HomeNetMon',
+    icon: '/icons/homenetmon.svg',
+    url: 'http://localhost:8034',
+    embed: true,
   }
   // Add more apps here, e.g.:
   // { id: 'grafana', name: 'Grafana', icon: '📊', url: 'http://localhost:3000', embed: false },

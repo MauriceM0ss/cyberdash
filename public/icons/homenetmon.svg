@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="64" height="64" version="1.1" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+ <defs>
+  <filter id="hnm-shadow" x="-.027" y="-.027" width="1.054" height="1.054" color-interpolation-filters="sRGB">
+   <feGaussianBlur stdDeviation="0.61875"/>
+  </filter>
+  <linearGradient id="hnm-tile" x1="9" x2="55" y1="55" y2="9" gradientUnits="userSpaceOnUse">
+   <stop stop-color="#1d2123" offset="0"/>
+   <stop stop-color="#33393e" stop-opacity=".99608" offset="1"/>
+  </linearGradient>
+ </defs>
+ <rect x="4.5" y="4.5" width="55" height="55" ry="15" fill="#141414" filter="url(#hnm-shadow)" opacity=".3" stroke-linecap="round" stroke-width="2.7444"/>
+ <rect x="4.5" y="4.5" width="55" height="55" ry="15" fill="url(#hnm-tile)" stroke-linecap="round" stroke-width="2.7444"/>
+ <!-- House roof + walls, with the wifi arcs knocked out of the body. -->
+ <path d="m32 14-18 14.4h4.2v21.6h27.6v-21.6h4.2z" fill="#fff"/>
+ <g fill="none" stroke="#272c30" stroke-linecap="round" stroke-width="2.6">
+  <path d="m24.6 38.5c4.1-3.9 10.7-3.9 14.8 0"/>
+  <path d="m28.3 42.8c2.1-2 5.3-2 7.4 0"/>
+ </g>
+ <circle cx="32" cy="46.8" r="1.9" fill="#272c30"/>
+</svg>
