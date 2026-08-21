@@ -12,6 +12,7 @@ import createSnake from './snake.js'
 import createBreakout from './breakout.js'
 import createInvaders from './invaders.js'
 import createPacman from './pacman.js'
+import createQuest from './quest.js'
 
 // The games place things at random. Pin the generator so a run either always
 // passes or always fails — a flaky playtest is worse than none.
@@ -33,6 +34,7 @@ function watcher() {
     clear() {}, 
     rect(x, y, w, h, color) { f.rects.push({ x, y, w, h, color }) },
     circle(x, y, r, color) { f.circles.push({ x, y, r, color }) },
+    line() {},
     wedge(x, y, r, a, b, color) { f.wedges.push({ x, y, color }) },
     text(str) { f.texts.push(String(str)) },
     banner(title) { f.banners.push(String(title)) },
@@ -165,6 +167,85 @@ function session(game, steps, drive = () => null) {
   // Standing still with four ghosts hunting has exactly one outcome.
   const r = session(createPacman(), 60 * 300)
   check('pacman ends when standing still', r.ended, r)
+}
+
+// ── quest ─────────────────────────────────────────────────────
+// The adventure cabinet is driven the way a player drives it: type a line,
+// press ENTER, wait for the reply window, dismiss it. Nothing reaches into the
+// game's state — the ego is located by its head, which is the only circle in
+// the room drawn in the text colour, and the score is read off the status line.
+{
+  const game = createQuest()
+  const w = watcher()
+  const draw = () => { w.reset(); game.draw(w); return w.frame }
+  const waiting = () => draw().texts.includes('press any key')
+  const egoAt = () => draw().circles.find((c) => c.color === P.text)
+  const hold = (keys, seconds) => {
+    const held = new Set(keys)
+    for (let i = 0; i < Math.round(seconds * 60); i++) game.update(DT, held)
+  }
+
+  // Type a command, let the ego walk wherever it decides it has to walk, then
+  // read the reply and clear the window.
+  function command(line) {
+    for (const ch of line) game.typed(ch)
+    game.key('Enter')
+    for (let i = 0; i < 900 && !waiting(); i++) game.update(DT, new Set())
+    const reply = draw().texts.join(' ')
+    game.key('Space')
+    return reply
+  }
+
+  game.reset()
+  check('quest opens on its title card', draw().banners[0] === 'SERVER CLOSET')
+  game.key('Space')
+
+  check('quest parses a two-word command',
+    /Dave/.test(command('examine the rack')), 'look rack')
+  check('quest reports words it does not have',
+    /know the word "frobnicate"/.test(command('frobnicate the rack')), 'unknown word')
+  check('quest keeps the door shut without a card',
+    /locked/.test(command('open door')), 'open door')
+
+  // Walking: left along the front of the room, then straight into the cable
+  // drum, which is the one thing on the floor that is allowed to stop you.
+  // From a fresh room — the commands above left the ego standing at the door,
+  // and a walk test that starts wherever the last test finished is a walk test
+  // that passes by accident.
+  game.reset()
+  game.key('Space')
+  const start = egoAt()
+  hold(['ArrowLeft'], 1.6)
+  const walked = egoAt()
+  check('quest ego walks', walked.x < start.x - 40, `x ${start.x.toFixed(1)} → ${walked.x.toFixed(1)}`)
+  hold(['ArrowUp'], 2)
+  const blocked = egoAt()
+  // Differential, because "it didn't get far" is also what a broken walk cycle
+  // looks like: the same push from a spot the drum doesn't cover has to carry
+  // the ego all the way to the back of the walkable floor.
+  hold(['ArrowLeft'], 0.7)
+  hold(['ArrowUp'], 2)
+  const clear = egoAt()
+  check('quest ego is stopped by the drum',
+    walked.y - blocked.y < 3 && walked.y - clear.y > 8,
+    `into drum ${(walked.y - blocked.y).toFixed(1)}, clear of it ${(walked.y - clear.y).toFixed(1)}`)
+
+  check('quest kills you for touching the copper',
+    /eleven minutes/.test(command('touch the wires')), 'touch wires')
+  check('quest shows a death banner', draw().banners[0] === 'YOU ARE DEAD', draw().banners)
+
+  // …and then the whole game, from the title card to the corridor.
+  game.key('Space')
+  game.key('Space')
+  command('read the clipboard')
+  command('look in the mug')
+  command('take the keycard')
+  command('flip breaker')
+  command('open the door')
+  for (let i = 0; i < 900 && !draw().banners.length; i++) game.update(DT, new Set())
+  const finished = draw()
+  check('quest can be completed', /YOU ESCAPED/.test(finished.banners[0] || ''), finished.banners)
+  check('quest awards every point on the way', scoreOf(w) === 25, `score ${scoreOf(w)}`)
 }
 
 let failed = 0
