@@ -5,7 +5,8 @@ import createSnake from '../games/snake.js'
 import createBreakout from '../games/breakout.js'
 import createInvaders from '../games/invaders.js'
 import createPacman from '../games/pacman.js'
-import { CloseIcon } from './Icons.jsx'
+import { isMuted, setMuted, wake } from '../games/sound.js'
+import { CloseIcon, SpeakerIcon, SpeakerMutedIcon } from './Icons.jsx'
 
 // The arcade: a terminal window with a tab per cabinet, one running at a time.
 //
@@ -23,6 +24,7 @@ const CABINETS = [
 export default function Arcade({ onClose }) {
   const [active, setActive] = useState(CABINETS[0].id)
   const [hint, setHint] = useState('')
+  const [mute, setMute] = useState(isMuted)
   const canvasRef = useRef(null)
   const cabinetRef = useRef(null)
   // The games sample the theme's CSS variables once when they start, so a theme
@@ -36,6 +38,13 @@ export default function Arcade({ onClose }) {
   useEffect(() => {
     cabinetRef.current?.focus()
   }, [active])
+
+  // The arcade is opened by a click, which is the gesture browsers want before
+  // they'll let a page make noise. Waking the beeper here means the first blip
+  // of the first game isn't the one that gets swallowed.
+  useEffect(() => {
+    wake()
+  }, [])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -61,9 +70,24 @@ export default function Arcade({ onClose }) {
       >
         <div className="term-bar">
           <span className="term-title">cyberdash@arcade:~/games</span>
-          <button className="icon-btn" onClick={onClose} aria-label="Close arcade">
-            <CloseIcon />
-          </button>
+          <div className="term-bar-actions">
+            <button
+              className="icon-btn"
+              onClick={() => {
+                const next = !mute
+                setMuted(next)
+                setMute(next)
+              }}
+              title={mute ? 'Sound off' : 'Sound on'}
+              aria-label={mute ? 'Turn sound on' : 'Turn sound off'}
+              aria-pressed={mute}
+            >
+              {mute ? <SpeakerMutedIcon /> : <SpeakerIcon />}
+            </button>
+            <button className="icon-btn" onClick={onClose} aria-label="Close arcade">
+              <CloseIcon />
+            </button>
+          </div>
         </div>
 
         <div className="term-tabs" role="tablist">

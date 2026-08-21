@@ -184,6 +184,17 @@ export function run(canvas, game) {
     const ox = (box.width - game.w * scale) / 2
     const oy = (box.height - game.h * scale) / 2
     ctx.setTransform(scale * dpr, 0, 0, scale * dpr, ox * dpr, oy * dpr)
+
+    // Clip to the playfield. The neon is a shadow, and a shadow cast by
+    // anything sitting on an edge — the score line, a brick row that spans the
+    // full width, the food when it lands in the last column — spreads past that
+    // edge and stains the letterbox either side of the screen. Nothing outside
+    // the playfield belongs to the game, so nothing outside it gets drawn.
+    // (Assigning canvas.width above resets the clip, so this can't accumulate.)
+    ctx.beginPath()
+    ctx.rect(0, 0, game.w, game.h)
+    ctx.clip()
+
     ctx.imageSmoothingEnabled = false
   }
 

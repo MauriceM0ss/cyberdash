@@ -73,3 +73,25 @@ export function ArcadeIcon({ size = 20 }) {
     </svg>
   )
 }
+
+// Speaker, with or without the sound coming out of it. Two glyphs rather than
+// one that changes colour: mute is a state you want to read at a glance.
+export function SpeakerIcon({ size = 18 }) {
+  return (
+    <svg {...base} width={size} height={size}>
+      <polygon points="4 9 8 9 12 5 12 19 8 15 4 15" />
+      <path d="M16 9a4 4 0 0 1 0 6" />
+      <path d="M18.5 6.5a7.5 7.5 0 0 1 0 11" />
+    </svg>
+  )
+}
+
+export function SpeakerMutedIcon({ size = 18 }) {
+  return (
+    <svg {...base} width={size} height={size}>
+      <polygon points="4 9 8 9 12 5 12 19 8 15 4 15" />
+      <line x1="16" y1="9" x2="21" y2="15" />
+      <line x1="21" y1="9" x2="16" y2="15" />
+    </svg>
+  )
+}

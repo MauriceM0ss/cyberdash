@@ -5,6 +5,7 @@
 // lopsided. Its connectivity was checked by flood fill before it shipped —
 // every one of the 207 pellets is reachable from the start tile.
 import { readBest, writeBest } from './engine.js'
+import { sfx } from './sound.js'
 
 const HALVES = [
   '##########', '#........#', '#o##.###.#', '#.........', '#.##.#.###',
@@ -129,6 +130,7 @@ export default function createPacman() {
 
   function loseLife() {
     lives -= 1
+    sfx.die()
     if (lives <= 0) {
       over = true
       best = writeBest('pacman', score)
@@ -161,7 +163,10 @@ export default function createPacman() {
         return
       }
       if (!started) {
-        if (code === 'Space' || code === 'Enter') started = true
+        if (code === 'Space' || code === 'Enter') {
+          started = true
+          sfx.start()
+        }
         return
       }
       const dir = KEY_DIRS[code]
@@ -193,12 +198,18 @@ export default function createPacman() {
       if (pellet) {
         pellets[ty][tx] = null
         score += pellet === 'o' ? 50 : 10
-        if (pellet === 'o') frightened = 7
+        if (pellet === 'o') {
+          frightened = 7
+          sfx.power()
+        } else {
+          sfx.eat()
+        }
       }
 
       if (!pelletsLeft()) {
         level += 1
         score += 200
+        sfx.level()
         resetPellets()
         placeActors()
         started = false
@@ -230,6 +241,7 @@ export default function createPacman() {
         if (!touching) continue
         if (frightened > 0) {
           score += 200
+          sfx.kill()
           const home = GHOST_HOME[g.index]
           g.x = home.x
           g.y = home.y

@@ -1,5 +1,6 @@
 // SNAKE — grid cabinet. Eat, grow, don't bite yourself or the wall.
 import { readBest, writeBest } from './engine.js'
+import { sfx } from './sound.js'
 
 const COLS = 26
 const ROWS = 18
@@ -61,13 +62,17 @@ export default function createSnake() {
         if (code === 'Space' || code === 'Enter') {
           if (over) this.reset()
           started = true
+          sfx.start()
         }
         return
       }
       const next = DIRS[code]
       // Queued rather than applied: two turns inside one step would otherwise
       // let you reverse into your own neck via a diagonal that never happened.
-      if (next && queued.length < 2) queued.push(next)
+      if (next && queued.length < 2) {
+        queued.push(next)
+        sfx.blip()
+      }
     },
 
     update(dt) {
@@ -88,6 +93,7 @@ export default function createSnake() {
         .some((s) => s.x === head.x && s.y === head.y)
 
       if (hitWall || hitSelf) {
+        sfx.die()
         over = true
         best = writeBest('snake', score)
         return
@@ -96,6 +102,7 @@ export default function createSnake() {
       snake.unshift(head)
       if (head.x === food.x && head.y === food.y) {
         score += 10
+        sfx.eat()
         step = Math.max(MIN_STEP, step - 0.004)
         placeFood()
       } else {

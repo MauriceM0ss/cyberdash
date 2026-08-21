@@ -1,6 +1,7 @@
 // ARKANOID — paddle, ball, wall of bricks. Clearing the wall builds the next
 // one a little faster, so a run ends on reflexes rather than on running out.
 import { readBest, writeBest } from './engine.js'
+import { sfx } from './sound.js'
 
 const W = 240
 const H = 180
@@ -59,6 +60,7 @@ export default function createBreakout() {
       if ((code === 'Space' || code === 'Enter') && (!started || over)) {
         if (over) this.reset()
         started = true
+        sfx.start()
       }
     },
 
@@ -100,6 +102,7 @@ export default function createBreakout() {
         ball.vx = Math.cos(angle) * speed
         ball.vy = Math.sin(angle) * speed
         ball.y = PADDLE_Y - BALL_R
+        sfx.bounce()
       }
 
       for (const brick of bricks) {
@@ -115,6 +118,7 @@ export default function createBreakout() {
           continue
         brick.alive = false
         score += brick.value
+        sfx.brick()
         // Bounce off whichever face was nearer — flipping vy unconditionally
         // makes side clips look wrong.
         const fromSide =
@@ -127,6 +131,7 @@ export default function createBreakout() {
 
       if (bricks.every((b) => !b.alive)) {
         level += 1
+        sfx.level()
         buildWall()
         serve()
         return
@@ -135,9 +140,11 @@ export default function createBreakout() {
       if (ball.y > H + 4) {
         lives -= 1
         if (lives <= 0) {
+          sfx.die()
           over = true
           best = writeBest('breakout', score)
         } else {
+          sfx.hit()
           serve()
         }
       }

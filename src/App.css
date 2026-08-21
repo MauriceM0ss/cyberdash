@@ -1365,3 +1365,9 @@
 .arcade-modal:focus {
   outline: none;
 }
+
+.term-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}

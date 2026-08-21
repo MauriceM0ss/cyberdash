@@ -1,6 +1,7 @@
 // ALIEN INVADERS — a marching grid that speeds up as you thin it out, four
 // shields that erode, and one shot on screen at a time.
 import { readBest, writeBest } from './engine.js'
+import { sfx } from './sound.js'
 
 const W = 220
 const H = 180
@@ -89,11 +90,15 @@ export default function createInvaders() {
         if (code === 'Space' || code === 'Enter') {
           if (over) this.reset()
           started = true
+          sfx.start()
         }
         return
       }
       // One shot in the air at a time — the original's whole rhythm.
-      if (code === 'Space' && !shot) shot = { x: shipX, y: SHIP_Y - 2 }
+      if (code === 'Space' && !shot) {
+        shot = { x: shipX, y: SHIP_Y - 2 }
+        sfx.shoot()
+      }
     },
 
     update(dt, held) {
@@ -121,6 +126,7 @@ export default function createInvaders() {
           if (edge) stepDown = true
         }
         if (alive.some((a) => a.y + ALIEN_H >= FLOOR - 4)) {
+          sfx.die()
           over = true
           best = writeBest('invaders', score)
           return
@@ -154,6 +160,7 @@ export default function createInvaders() {
           ) {
             a.alive = false
             score += a.value
+            sfx.kill()
             shot = null
             break
           }
@@ -171,8 +178,11 @@ export default function createInvaders() {
         if (hitShip) {
           lives -= 1
           if (lives <= 0) {
+            sfx.die()
             over = true
             best = writeBest('invaders', score)
+          } else {
+            sfx.hit()
           }
           return false
         }
@@ -181,6 +191,7 @@ export default function createInvaders() {
 
       if (!living().length) {
         wave += 1
+        sfx.level()
         buildWave()
         buildShields()
       }
