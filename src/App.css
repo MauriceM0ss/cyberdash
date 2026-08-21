@@ -1198,3 +1198,176 @@
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
+
+/* ── Arcade ───────────────────────────────────────────────────────────────
+   A terminal window with a tab per game. Sized to the tallest cabinet and
+   capped against the viewport, so the canvas gets whatever is left — the games
+   letterbox themselves into it (see src/games/engine.js), so any size works. */
+.arcade-modal {
+  width: min(94vw, 720px);
+  max-height: calc(100vh - 72px);
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+  background: var(--bg);
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+}
+
+.term-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 6px 4px 14px;
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--pane-rule);
+}
+
+.term-title {
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: var(--header-logo);
+}
+
+.term-bar .icon-btn {
+  color: var(--header-fg);
+}
+
+.term-bar .icon-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.term-tabs {
+  display: flex;
+  gap: 1px;
+  padding: 6px 8px 0;
+  background: var(--surface-3);
+  border-bottom: 1px solid var(--pane-rule);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.term-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.term-tab {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  padding: 7px 16px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 7px 7px 0 0;
+  background: none;
+  font-family: inherit;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.term-tab:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+/* The open tab reads as the front of the stack: it takes the window's own
+   background and loses its bottom edge into the screen below it. */
+.term-tab.is-active {
+  color: var(--brand);
+  background: var(--bg);
+  border-color: var(--pane-rule);
+  margin-bottom: -1px;
+  padding-bottom: 8px;
+}
+
+.term-tab-n {
+  font-size: 10px;
+  opacity: 0.55;
+}
+
+.term-screen {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: min(56vh, 420px);
+  background: var(--bg);
+}
+
+.term-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* CRT scanlines. Purely decorative and non-interactive, hence pointer-events:
+   none — a click has to reach the canvas underneath. */
+.term-scanlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0px,
+    rgba(0, 0, 0, 0) 2px,
+    rgba(0, 0, 0, 0.22) 3px,
+    rgba(0, 0, 0, 0.22) 4px
+  );
+}
+
+.term-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 9px 14px 11px;
+  border-top: 1px solid var(--pane-rule);
+  background: var(--surface-3);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.term-prompt {
+  color: var(--brand);
+}
+
+.term-caret {
+  color: var(--brand);
+  animation: term-blink 1.1s steps(1) infinite;
+}
+
+@keyframes term-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* The scanlines and the blinking caret are the two things here that move for
+   no functional reason. */
+@media (prefers-reduced-motion: reduce) {
+  .term-caret {
+    animation: none;
+  }
+
+  .term-scanlines {
+    display: none;
+  }
+}
+
+/* The dialog takes focus when it opens (so SPACE reaches the game rather than
+   re-triggering a button), but it isn't itself an interactive control — the
+   ring would just be noise. */
+.arcade-modal:focus {
+  outline: none;
+}
+
+.term-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
