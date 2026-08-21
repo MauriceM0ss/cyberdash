@@ -8,6 +8,11 @@
 //
 //    { w, h, hint, reset(), key(code), update(dt, held), draw(screen) }
 //
+//  A cabinet with a parser adds `typed(char)`. Any key that produces a single
+//  character goes there instead of to `key`, and it comes from `event.key`
+//  rather than `event.code`, so a player spelling "quit" gets a q from wherever
+//  Q lives on their keyboard rather than from wherever Q lives on a US one.
+//
 //  `w`/`h` are the game's own units — a Snake board is 24x18 because that is
 //  how many cells it has. `run` scales that to whatever the canvas is and
 //  letterboxes the remainder, so no game does arithmetic about pixels.
@@ -91,6 +96,24 @@ class Screen {
     ctx.arc(cx, cy, r, from, to)
     ctx.closePath()
     ctx.fill()
+    ctx.restore()
+  }
+
+  // A line, for the cabinet that draws a room instead of a grid. Everything
+  // else here is axis-aligned; perspective is not.
+  line(x1, y1, x2, y2, color, width = 1, glow = 0) {
+    const { ctx } = this
+    ctx.save()
+    ctx.strokeStyle = color
+    ctx.lineWidth = width
+    if (glow) {
+      ctx.shadowColor = color
+      ctx.shadowBlur = glow
+    }
+    ctx.beginPath()
+    ctx.moveTo(x1, y1)
+    ctx.lineTo(x2, y2)
+    ctx.stroke()
     ctx.restore()
   }
 
@@ -201,7 +224,15 @@ export function run(canvas, game) {
   function onKeyDown(e) {
     if (e.ctrlKey || e.metaKey || e.altKey) return
     if (SWALLOW.has(e.code)) e.preventDefault()
-    if (!e.repeat) game.key?.(e.code)
+    // A parser cabinet is spelling words, so it wants the character and not the
+    // physical key. Characters stop there: telling the game about the same
+    // press twice would type a letter and fire a command with it.
+    if (game.typed && e.key.length === 1) {
+      e.preventDefault()
+      game.typed(e.key)
+    } else if (!e.repeat) {
+      game.key?.(e.code)
+    }
     held.add(e.code)
   }
   const onKeyUp = (e) => held.delete(e.code)

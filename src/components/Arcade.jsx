@@ -5,6 +5,7 @@ import createSnake from '../games/snake.js'
 import createBreakout from '../games/breakout.js'
 import createInvaders from '../games/invaders.js'
 import createPacman from '../games/pacman.js'
+import createQuest from '../games/quest.js'
 import { isMuted, setMuted, wake } from '../games/sound.js'
 import { CloseIcon, SpeakerIcon, SpeakerMutedIcon } from './Icons.jsx'
 
@@ -19,6 +20,7 @@ const CABINETS = [
   { id: 'arkanoid', name: 'arkanoid', create: createBreakout },
   { id: 'invaders', name: 'invaders', create: createInvaders },
   { id: 'pacman', name: 'pacman', create: createPacman },
+  { id: 'quest', name: 'quest', create: createQuest },
 ]
 
 export default function Arcade({ onClose }) {
