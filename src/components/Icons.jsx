@@ -61,3 +61,15 @@ export function PowerIcon({ size = 16 }) {
     </svg>
   )
 }
+
+// Terminal window with a prompt in it — the arcade lives behind a fake shell,
+// so the button that opens it is a shell rather than a joypad.
+export function ArcadeIcon({ size = 20 }) {
+  return (
+    <svg {...base} width={size} height={size}>
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <polyline points="6 10 9 12.5 6 15" />
+      <line x1="12" y1="15" x2="17" y2="15" />
+    </svg>
+  )
+}

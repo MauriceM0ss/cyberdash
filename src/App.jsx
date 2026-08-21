@@ -9,12 +9,14 @@ import { useNativeStage, readRect } from './useNativeStage.js'
 import * as nativeStage from './nativeStage.js'
 import Dock from './components/Dock.jsx'
 import Settings from './components/Settings.jsx'
+import Arcade from './components/Arcade.jsx'
 import {
   ReloadIcon,
   InfoIcon,
   SettingsIcon,
   CloseIcon,
   PowerIcon,
+  ArcadeIcon,
 } from './components/Icons.jsx'
 import './App.css'
 
@@ -89,6 +91,8 @@ export default function App() {
   // Whether the dock's power menu is up — another HTML layer that has to be
   // able to show through the stage. See htmlCoversStage below.
   const [dockMenuOpen, setDockMenuOpen] = useState(false)
+  // Whether the arcade is open.
+  const [arcadeOpen, setArcadeOpen] = useState(false)
   // Dock layout, chosen in Settings ▸ Preferences and persisted.
   const [dockPosition, setDockPosition] = usePref('dockPosition')
   const [dockSize, setDockSize] = usePref('dockSize')
@@ -220,12 +224,17 @@ export default function App() {
       // This is checked before the input guard below on purpose: Settings no
       // longer closes on a backdrop click, so without this you'd have no
       // keyboard way out while typing in it.
-      if (e.key === 'Escape' && (settingsOpen || helpOpen)) {
+      if (e.key === 'Escape' && (settingsOpen || helpOpen || arcadeOpen)) {
         if (settingsOpen) setSettingsOpen(false)
+        else if (arcadeOpen) setArcadeOpen(false)
         else setHelpOpen(false)
         e.preventDefault()
         return
       }
+
+      // The arcade wants the arrow keys, the number row and the space bar for
+      // itself, so the shell's own shortcuts stand down while it's up.
+      if (arcadeOpen) return
 
       const el = e.target
       if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
@@ -246,7 +255,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [orderedApps, activeId, helpOpen, settingsOpen])
+  }, [orderedApps, activeId, helpOpen, settingsOpen, arcadeOpen])
 
   // Drive the native child webviews from state (inert in a plain browser). We
   // hide the active webview whenever an HTML layer must show through it, since
@@ -254,6 +263,7 @@ export default function App() {
   const htmlCoversStage =
     helpOpen ||
     settingsOpen ||
+    arcadeOpen ||
     dockMenuOpen ||
     (!!active && (blocked[active.id] || health[active.id] === 'down'))
   useNativeStage({
@@ -276,6 +286,7 @@ export default function App() {
         onReload={() => active && reloadApp(active.id)}
         onHelp={() => setHelpOpen(true)}
         onSettings={() => setSettingsOpen(true)}
+        onArcade={() => setArcadeOpen(true)}
       />
 
       <main className="stage">
@@ -369,6 +380,8 @@ export default function App() {
         <HelpOverlay appCount={apps.length} onClose={() => setHelpOpen(false)} />
       )}
 
+      {arcadeOpen && <Arcade onClose={() => setArcadeOpen(false)} />}
+
       {settingsOpen && (
         <Settings
           prefs={{ dockPosition, setDockPosition, dockSize, setDockSize }}
@@ -386,7 +399,7 @@ export default function App() {
 // Left: the CyberDash wordmark. Right: an action cluster matching SecAnalysis's
 // — 34px monochrome .icon-btn buttons carrying the same stroke-SVG glyphs, on
 // the same near-black bar (--header-*), so the two apps' chrome is identical.
-function TopBar({ canReload, onReload, onHelp, onSettings }) {
+function TopBar({ canReload, onReload, onHelp, onSettings, onArcade }) {
   return (
     <header className="app-bar">
       <span className="app-bar-title">CyberDash</span>
@@ -401,6 +414,15 @@ function TopBar({ canReload, onReload, onHelp, onSettings }) {
             <ReloadIcon />
           </button>
         )}
+        <button
+          className="icon-btn"
+          onClick={onArcade}
+          title="Arcade"
+          aria-label="Open the arcade"
+          aria-haspopup="dialog"
+        >
+          <ArcadeIcon />
+        </button>
         <button
           className="icon-btn"
           onClick={onHelp}
