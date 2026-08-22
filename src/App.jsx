@@ -5,7 +5,9 @@ import { useAppControl, powerState } from './useAppControl.js'
 import { useTheme } from './useTheme.js'
 import { isTauri, THEMES } from './theme.js'
 import { usePref } from './usePrefs.js'
+import { useTheme as useResolvedTheme } from './useTheme.js'
 import { useNativeStage, readRect } from './useNativeStage.js'
+import { pushThemeToFrame, broadcastThemeNative } from './appTheme.js'
 import * as nativeStage from './nativeStage.js'
 import Dock from './components/Dock.jsx'
 import Settings from './components/Settings.jsx'
@@ -96,6 +98,13 @@ export default function App() {
   // Dock layout, chosen in Settings ▸ Preferences and persisted.
   const [dockPosition, setDockPosition] = usePref('dockPosition')
   const [dockSize, setDockSize] = usePref('dockSize')
+  const [themeSync, setThemeSync] = usePref('themeSync')
+  // The theme actually on screen. 'Auto' resolves to one of the concrete five,
+  // and it's the resolved one the apps are told about — they have no notion of
+  // following the desktop themselves.
+  const resolvedTheme = useResolvedTheme()
+  // Live iframes by app id, so the browser build can post the theme into them.
+  const frames = useRef({})
   // apps.config.js layered with the edits, additions and removals made in
   // Settings ▸ Apps. `apps` is memoised inside the hook, so the pollers below
   // only restart when the list genuinely changes.
@@ -168,6 +177,20 @@ export default function App() {
     }
     prevHealth.current = health
   }, [health])
+
+  // Keep the embedded apps on the shell's theme. In the browser that means
+  // posting into each live iframe; in the .deb the native side owns it and also
+  // re-sends on every page load, which is what makes a cold start correct.
+  useEffect(() => {
+    if (themeSync !== 'on' || !resolvedTheme) return
+    if (USE_WEBVIEW) {
+      broadcastThemeNative(resolvedTheme)
+      return
+    }
+    for (const app of apps) {
+      if (app.embed) pushThemeToFrame(frames.current[app.id], app.url, resolvedTheme)
+    }
+  }, [resolvedTheme, themeSync, apps])
 
   const orderedApps = order
     .map((id) => apps.find((a) => a.id === id))
@@ -350,6 +373,16 @@ export default function App() {
                   // browsers fire onError; the manual "open in tab" escape hatch
                   // in BlockedNotice covers the silent cases.
                   onError={() => setBlocked((b) => ({ ...b, [a.id]: true }))}
+                  ref={(el) => {
+                    frames.current[a.id] = el
+                  }}
+                  // A frame has no document to post into until it has loaded,
+                  // so each one is told the theme as it arrives — including
+                  // after a reload, which remounts it.
+                  onLoad={() => {
+                    if (themeSync === 'on' && resolvedTheme)
+                      pushThemeToFrame(frames.current[a.id], a.url, resolvedTheme)
+                  }}
                 />
               )
             })}
@@ -384,7 +417,14 @@ export default function App() {
 
       {settingsOpen && (
         <Settings
-          prefs={{ dockPosition, setDockPosition, dockSize, setDockSize }}
+          prefs={{
+            dockPosition,
+            setDockPosition,
+            dockSize,
+            setDockSize,
+            themeSync,
+            setThemeSync,
+          }}
           control={control}
           registry={registry}
           onClose={() => setSettingsOpen(false)}

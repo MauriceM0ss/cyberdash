@@ -7,9 +7,11 @@
 // the @tauri-apps/api `onThemeChanged` event (see src/theme.js) and restyles
 // itself live.
 
-use tauri::webview::NewWindowResponse;
-use tauri::WebviewWindowBuilder;
+use tauri::webview::{NewWindowResponse, PageLoadEvent};
+use tauri::{Manager, WebviewWindowBuilder};
 use tauri_plugin_opener::OpenerExt;
+
+mod apptheme;
 
 #[cfg(target_os = "linux")]
 mod stage;
@@ -21,13 +23,26 @@ const EXTERNAL_SCHEMES: [&str; 2] = ["http", "https"];
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let builder = tauri::Builder::default().plugin(tauri_plugin_opener::init());
+    let builder = tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
+        .manage(apptheme::CurrentTheme::default())
+        // Embedded apps are told the shell's theme as they finish loading, which
+        // covers a cold start, a reload and an app coming back after being down.
+        .on_page_load(|webview, payload| {
+            if payload.event() == PageLoadEvent::Finished {
+                apptheme::push_on_load(webview.app_handle(), webview.label());
+            }
+        });
 
     #[cfg(target_os = "linux")]
     let builder = builder.invoke_handler(tauri::generate_handler![
         stage::stage_place,
-        stage::stage_hide
+        stage::stage_hide,
+        apptheme::theme_broadcast
     ]);
+
+    #[cfg(not(target_os = "linux"))]
+    let builder = builder.invoke_handler(tauri::generate_handler![apptheme::theme_broadcast]);
 
     builder
         .setup(|app| {
