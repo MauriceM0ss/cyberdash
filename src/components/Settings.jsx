@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { THEMES } from '../theme.js'
 import { useThemePref } from '../useTheme.js'
-import { DOCK_POSITIONS, DOCK_SIZES } from '../usePrefs.js'
+import { DOCK_POSITIONS, DOCK_SIZES, THEME_SYNC } from '../usePrefs.js'
 import { DEFAULT_URL, probe } from '../dockerctl.js'
 import {
   asAllowlistEntry,
@@ -82,6 +82,29 @@ export default function Settings({ prefs, control, registry, onClose }) {
                 remembered on this machine. <strong>Auto</strong> follows your
                 desktop’s Light/Dark style — Dark Terminal when it’s dark, Light
                 when it’s light — and keeps following it as you flip it.
+              </p>
+
+              <label className="field">
+                Embedded apps
+                <select
+                  className="modal-input"
+                  value={prefs.themeSync}
+                  onChange={(e) => prefs.setThemeSync(e.target.value)}
+                >
+                  {THEME_SYNC.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className="settings-desc">
+                Every app in the dock implements the same five themes, so
+                CyberDash can hand its own theme to each of them as you switch —
+                including on <strong>Auto</strong>, where they get whichever
+                palette your desktop resolved to. Each app still decides for
+                itself and keeps its own setting, so switch this off to theme
+                them individually.
               </p>
             </section>
           </div>

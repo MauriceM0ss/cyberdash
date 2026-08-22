@@ -16,17 +16,27 @@ export const DOCK_SIZES = [
   { id: 'small', name: 'Small' },
 ]
 
+export const THEME_SYNC = [
+  { id: 'on', name: 'Apply to embedded apps' },
+  { id: 'off', name: 'CyberDash only' },
+]
+
 const KEYS = {
   dockPosition: 'cyberdash.dockPosition',
   dockSize: 'cyberdash.dockSize',
+  themeSync: 'cyberdash.themeSync',
 }
 
 const ALLOWED = {
   dockPosition: DOCK_POSITIONS.map((p) => p.id),
   dockSize: DOCK_SIZES.map((s) => s.id),
+  themeSync: THEME_SYNC.map((t) => t.id),
 }
 
-const DEFAULTS = { dockPosition: 'bottom', dockSize: 'normal' }
+// Theme sync defaults on: every app in the family already implements the same
+// five themes, so matching them is the expected behaviour rather than a
+// surprise. Turn it off to theme apps individually.
+const DEFAULTS = { dockPosition: 'bottom', dockSize: 'normal', themeSync: 'on' }
 
 function load(name) {
   try {
